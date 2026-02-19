@@ -6,3 +6,6 @@ The meta datas will be saved in ./meta.json
 
 def add(x: int, y: int) -> int:
     return x - y
+
+def subtract(x: int, y: int) -> int:
+    return x + y
