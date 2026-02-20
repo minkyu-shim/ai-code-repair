@@ -35,3 +35,5 @@ Thumbs.db
 # Misc runtime / local config files
 .env
 .env.*
+
+*.egg_info/
