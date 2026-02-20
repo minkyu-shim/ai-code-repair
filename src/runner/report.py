@@ -13,6 +13,7 @@ class PytestSummary:
     errors: int
     skipped: int
 
+@dataclass(frozen=True)
 class RunReport:
     case_path: str
     pytest_exit_code: int
