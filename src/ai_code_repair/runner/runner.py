@@ -1,149 +1,126 @@
 from __future__ import annotations
 
-import argparse
-import json
+import subprocess # it allows you to run external commands and get the output
+import time
+import xml.etree.ElementTree as ET # python built in XML parser
 from pathlib import Path
-import shlex
-import shutil
-import subprocess
-import tempfile
-from typing import Any, Sequence
+from typing import Tuple
+
+from ai_code_repair.runner.report import PytestSummary, RunReport
+
+def _parse_junit_xml(xml_path: Path) -> PytestSummary:
+    """
+    Parse pytest-generated JUnit XML and compute test counts.
+    Supports both <testsuite> and <testsuites> roots.
+
+    If the XML is malformed or incomplete, we treat it as a pytest error.
+    """
+    try:
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+    except ET.ParseError:
+        # Pytest may write a partial file if it crashes mid-run.
+        return PytestSummary(total=0, passed=0, failed=0, errors=1, skipped=0)
+
+    if root.tag == "testsuites":
+        tests = failures = errors = skipped = 0
+        for suite in root.findall("testsuite"):
+            tests += int(suite.attrib.get("tests", "0"))
+            failures += int(suite.attrib.get("failures", "0"))
+            errors += int(suite.attrib.get("errors", "0"))
+            skipped += int(suite.attrib.get("skipped", "0"))
+    else:
+        tests = int(root.attrib.get("tests", "0"))
+        failures = int(root.attrib.get("failures", "0"))
+        errors = int(root.attrib.get("errors", "0"))
+        skipped = int(root.attrib.get("skipped", "0"))
+
+    passed = max(tests - failures - errors - skipped, 0)
+
+    return PytestSummary(
+        total=tests,
+        passed=passed,
+        failed=failures,
+        errors=errors,
+        skipped=skipped,
+    )
 
 
-class Runner:
-    def __init__(self, test_command: Sequence[str] | None = None) -> None:
-        self.test_command = list(test_command or ["python", "-m", "pytest", "-q"])
+def _build_pytest_cmd(junit_xml_path: Path, pytest_args: Iterable[str]) -> list[str]:
+    """
+    Build the pytest command as a list suitable for subprocess.run(..., shell=False).
+    """
+    return [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "--junitxml",
+        str(junit_xml_path),
+        *pytest_args,
+    ]
 
-    def run(
-        self,
-        program_dir: str | Path,
-        patch: str | Path,
-        report_path: str | Path | None = None,
-        keep_patched_dir: bool = False,
-    ) -> dict[str, Any]:
-        source_dir = Path(program_dir).resolve()
-        if not source_dir.is_dir():
-            raise FileNotFoundError(f"Program directory not found: {source_dir}")
 
-        before = self._run_tests(source_dir)
+def run_pytest_case(
+    case_dir: Path,
+    report_dir: Path,
+    *,
+    pytest_args: Tuple[str, ...] = (),
+    timeout_seconds: int = 120,
+) -> RunReport:
+    """
+    Run pytest inside `case_dir`, write junit.xml to `report_dir`,
+    parse it, and return a structured report.
+    """
+    case_dir = case_dir.resolve()
+    report_dir = report_dir.resolve()
+    report_dir.mkdir(parents=True, exist_ok=True)
 
-        patched_dir = Path(tempfile.mkdtemp(prefix=f"{source_dir.name}_patched_"))
-        shutil.rmtree(patched_dir, ignore_errors=True)
-        shutil.copytree(source_dir, patched_dir)
+    junit_xml_path = report_dir / "junit.xml"
+    cmd = _build_pytest_cmd(junit_xml_path, pytest_args)
 
-        patch_applied = False
-        patch_error = None
-        after = None
+    start = time.perf_counter()
 
-        try:
-            self._apply_patch(patched_dir, patch)
-            patch_applied = True
-            after = self._run_tests(patched_dir)
-        except Exception as exc:  # pragma: no cover
-            patch_error = str(exc)
-
-        status = self._status(before, after, patch_applied)
-
-        report: dict[str, Any] = {
-            "name": source_dir.name,
-            "program_dir": str(source_dir),
-            "patched_dir": str(patched_dir) if keep_patched_dir else None,
-            "before": before,
-            "after": after,
-            "patch_applied": patch_applied,
-            "patch_error": patch_error,
-            "status": status,
-        }
-
-        if report_path is not None:
-            output_path = Path(report_path)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
-
-        if not keep_patched_dir:
-            shutil.rmtree(patched_dir, ignore_errors=True)
-
-        return report
-
-    def _run_tests(self, project_dir: Path) -> dict[str, Any]:
-        result = subprocess.run(
-            self.test_command,
-            cwd=project_dir,
+    try:
+        completed = subprocess.run(
+            cmd,
+            cwd=str(case_dir),
             capture_output=True,
             text=True,
-            check=False,
+            timeout=timeout_seconds,
         )
-        return {
-            "passed": result.returncode == 0,
-            "returncode": result.returncode,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-        }
+        duration = time.perf_counter() - start
 
-    @staticmethod
-    def _apply_patch(project_dir: Path, patch: str | Path) -> None:
-        patch_path = Path(patch)
-        temp_path: Path | None = None
-
-        if patch_path.is_file():
-            diff_file = patch_path.resolve()
+        # If pytest crashes before writing XML, still return a report.
+        if junit_xml_path.exists():
+            summary = _parse_junit_xml(junit_xml_path)
         else:
-            temp = tempfile.NamedTemporaryFile(mode="w", suffix=".diff", delete=False, encoding="utf-8")
-            temp.write(str(patch))
-            temp.close()
-            temp_path = Path(temp.name)
-            diff_file = temp_path
+            summary = PytestSummary(total=0, passed=0, failed=0, errors=1, skipped=0)
 
-        try:
-            result = subprocess.run(
-                ["git", "apply", "--whitespace=nowarn", str(diff_file)],
-                cwd=project_dir,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                error_text = result.stderr.strip() or result.stdout.strip() or "patch apply failed"
-                raise RuntimeError(error_text)
-        finally:
-            if temp_path is not None:
-                temp_path.unlink(missing_ok=True)
+        return RunReport(
+            case_path=str(case_dir),
+            pytest_exit_code=completed.returncode,
+            duration_seconds=duration,
+            junit_xml_path=str(junit_xml_path),
+            stdout=completed.stdout,
+            stderr=completed.stderr,
+            summary=summary,
+        )
 
-    @staticmethod
-    def _status(before: dict[str, Any], after: dict[str, Any] | None, patch_applied: bool) -> str:
-        if not patch_applied or after is None:
-            return "patch_failed"
-        if (not before["passed"]) and after["passed"]:
-            return "repaired"
-        if before["passed"] and (not after["passed"]):
-            return "regressed"
-        return "not_repaired"
+    except subprocess.TimeoutExpired as e:
+        duration = time.perf_counter() - start
 
+        # Timeout: pytest didn't finish. Treat as an error.
+        # stdout/stderr exist on the exception object depending on Python version.
+        stdout = e.stdout if isinstance(e.stdout, str) else (e.stdout.decode() if e.stdout else "")
+        stderr = e.stderr if isinstance(e.stderr, str) else (e.stderr.decode() if e.stderr else "")
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Simple test runner for patch evaluation.")
-    parser.add_argument("--program", required=True, help="Buggy program folder")
-    parser.add_argument("--patch", required=True, help="Patch file path (.diff/.patch) or inline diff text")
-    parser.add_argument("--report", required=True, help="Output JSON path")
-    parser.add_argument(
-        "--test-command",
-        default="python -m pytest -q",
-        help="Command used to run tests",
-    )
-    parser.add_argument("--keep-patched-dir", action="store_true", help="Keep copied patched folder")
-    args = parser.parse_args(argv)
-
-    runner = Runner(test_command=shlex.split(args.test_command))
-    report = runner.run(
-        program_dir=args.program,
-        patch=args.patch,
-        report_path=args.report,
-        keep_patched_dir=args.keep_patched_dir,
-    )
-    print(json.dumps(report, indent=2))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-
+        return RunReport(
+            case_path=str(case_dir),
+            pytest_exit_code=-1,  # convention: -1 for timeout
+            duration_seconds=duration,
+            junit_xml_path=str(junit_xml_path),
+            stdout=stdout,
+            stderr=stderr,
+            summary=PytestSummary(total=0, passed=0, failed=0, errors=1, skipped=0),
+        )
