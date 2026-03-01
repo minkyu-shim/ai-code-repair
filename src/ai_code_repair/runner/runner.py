@@ -4,7 +4,7 @@ import subprocess # it allows you to run external commands and get the output
 import time
 import xml.etree.ElementTree as ET # python built in XML parser
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Iterable
 
 from ai_code_repair.runner.report import PytestSummary, RunReport
 
