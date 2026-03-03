@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="6" time="0.062" timestamp="2026-02-20T23:04:59.320746+01:00" hostname="DESKTOP-TISV7MK"><testcase classname="datasets.mini_bugs.case_001.test_buggy" name="test_add_basic" time="0.001"><failure message="assert -1 == 5&#10; +  where -1 = add(2, 3)">def test_add_basic():
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="6" time="0.011" timestamp="2026-03-03T18:22:35.161154+01:00" hostname="Minkyus-MacBook-Pro.local"><testcase classname="datasets.mini_bugs.case_001.test_buggy" name="test_add_basic" time="0.000"><failure message="assert -1 == 5&#10; +  where -1 = add(2, 3)">def test_add_basic():
 &gt;       assert add(2, 3) == 5
 E       assert -1 == 5
 E        +  where -1 = add(2, 3)

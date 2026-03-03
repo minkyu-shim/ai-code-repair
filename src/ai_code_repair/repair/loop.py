@@ -10,7 +10,7 @@ from typing import Any
 from ai_code_repair.repair.llm import GeminiClient
 from ai_code_repair.repair.log import IterationLog, RepairResult
 from ai_code_repair.repair.patcher import apply_patch, rollback
-from ai_code_repair.repair.prompt import build_prompt
+from ai_code_repair.repair.prompt import build_prompt, summarize_failures
 from ai_code_repair.runner.report import RunReport
 from ai_code_repair.runner.runner import run_pytest_case
 
@@ -81,9 +81,10 @@ class RepairLoop:
                 pre_patch_summary = dict(current_summary_dict)
 
                 source_code = target_path.read_text(encoding="utf-8")
-                test_output = latest_report.stdout
-
-                prompt = build_prompt(source_code, test_output, target_file)
+                test_summary = summarize_failures(
+                    latest_report.junit_xml_path, latest_report.stdout
+                )
+                prompt = build_prompt(source_code, test_summary, target_file)
                 raw_response = ""
                 new_source = ""
                 llm_error_type: str | None = None
