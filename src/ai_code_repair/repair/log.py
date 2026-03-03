@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +16,9 @@ class IterationLog:
     post_patch_summary: dict[str, Any] | None
     duration_seconds: float
     model: str
+    llm_error_type: str | None = None
+    llm_error_message: str | None = None
+    llm_retry_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -32,6 +35,8 @@ class RepairResult:
     initial_summary: dict[str, Any]
     final_summary: dict[str, Any]
     total_duration_seconds: float
+    fatal_error_type: str | None = None
+    fatal_error_message: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
