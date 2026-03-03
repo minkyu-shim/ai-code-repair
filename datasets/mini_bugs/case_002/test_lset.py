@@ -32,21 +32,22 @@ def random_list():
             for k in range(test_size)
             if random.choice([True, False])]
 
-not_lsets = [[1,1],
+
+not_lsets = [[1, 1],
              [[], []],
              [{'a': 1}, {'a': 1}, {'a': 1}]
              ]
 
 lsets = [[],
          [1],
-         [1,2,3],
+         [1, 2, 3],
          [{'a': 1}],
          [{'a': 1}, {'a': 2}],
          [{'a': 1}, {'a': 2}, {'a': 4}],
          [{1}],
          [{1}, {2}],
          [{1}, {2}, {4}],
-         [({1},{2}),({1},{3}),({2},{3})]
+         [({1}, {2}), ({1}, {3}), ({2}, {3})]
          ]
 
 
@@ -64,10 +65,10 @@ class LsetTestCase(AlgTestCase):
             self.assertTrue(is_lset(s), f"is_lset miscalculated.  {s} should be considered an lset")
         for s in not_lsets:
             self.assertFalse(is_lset(s), f"is_lset miscalculated.  {s} should NOT be considered an lset")
-        self.assertEqual(distinct([{1},{1}]),[{1}], f"distinct failed")
-        self.assertEqual(distinct([({1},{2}),({1},{2})]),[({1},{2})], f"distinct failed")
-        self.assertEqual(find_duplicates([{1},{1}]),[{1}], f"find_duplicates failed")
-        self.assertEqual(find_duplicates([({1},{2}),({1},{2})]),[({1},{2})], f"find_duplicates failed")
+        self.assertEqual(distinct([{1}, {1}]), [{1}], f"distinct failed")
+        self.assertEqual(distinct([({1}, {2}), ({1}, {2})]), [({1}, {2})], f"distinct failed")
+        self.assertEqual(find_duplicates([{1}, {1}]), [{1}], f"find_duplicates failed")
+        self.assertEqual(find_duplicates([({1}, {2}), ({1}, {2})]), [({1}, {2})], f"find_duplicates failed")
 
     def test_find_duplicates_0(self):
         self.assertEqual(find_duplicates([]), [])
@@ -499,4 +500,5 @@ class LsetTestCase(AlgTestCase):
 
 if __name__ == '__main__':
     import unittest
+
     unittest.main()

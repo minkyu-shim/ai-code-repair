@@ -83,11 +83,11 @@ def lset_equal(s: List, t: List) -> bool:
     assert isinstance(s, list)
     assert isinstance(t, list)
     return (
-        is_lset(s)
-        and is_lset(t)
-        and len(s) == len(t)
-        and lset_subset(s, t)
-        and lset_subset(t, s)
+            is_lset(s)
+            and is_lset(t)
+            and len(s) == len(t)
+            and lset_subset(s, t)
+            and lset_subset(t, s)
     )
 
 

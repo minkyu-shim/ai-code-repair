@@ -1,0 +1,4 @@
+{
+  "target_file": "lset.py",
+  "description": "buggy find_duplicates function in list-based set implementation"
+}

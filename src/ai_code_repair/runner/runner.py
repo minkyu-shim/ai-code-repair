@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import subprocess # it allows you to run external commands and get the output
+import subprocess  # it allows you to run external commands and get the output
 import time
-import xml.etree.ElementTree as ET # python built in XML parser
+import xml.etree.ElementTree as ET  # python built in XML parser
 from pathlib import Path
 from typing import Tuple, Iterable
 
 from ai_code_repair.runner.report import PytestSummary, RunReport
+
 
 def _parse_junit_xml(xml_path: Path) -> PytestSummary:
     """
@@ -62,11 +63,11 @@ def _build_pytest_cmd(junit_xml_path: Path, pytest_args: Iterable[str]) -> list[
 
 
 def run_pytest_case(
-    case_dir: Path,
-    report_dir: Path,
-    *,
-    pytest_args: Tuple[str, ...] = (),
-    timeout_seconds: int = 120,
+        case_dir: Path,
+        report_dir: Path,
+        *,
+        pytest_args: Tuple[str, ...] = (),
+        timeout_seconds: int = 120,
 ) -> RunReport:
     """
     Run pytest inside `case_dir`, write junit.xml to `report_dir`,

@@ -1,0 +1,23 @@
+{
+  "case_path": "/Users/minkyu/base/03-personal-project/01-ai-code-repair/datasets/mini_bugs/case_001",
+  "target_file": "buggy.py",
+  "model": "gemini-2.0-flash",
+  "success": false,
+  "total_iterations": 0,
+  "iterations": [],
+  "initial_summary": {
+    "total": 6,
+    "passed": 2,
+    "failed": 4,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_summary": {
+    "total": 6,
+    "passed": 2,
+    "failed": 4,
+    "errors": 0,
+    "skipped": 0
+  },
+  "total_duration_seconds": 0.12883529199461918
+}

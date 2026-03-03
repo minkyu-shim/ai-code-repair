@@ -37,3 +37,4 @@ Thumbs.db
 .env.*
 
 *.egg_info/
+.claude/
