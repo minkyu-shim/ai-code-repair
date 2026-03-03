@@ -1,0 +1,237 @@
+# AI-Assisted Program Repair Using LLMs
+
+A test-guided, iterative repair framework that uses large language models to automatically fix buggy Python programs.
+
+---
+
+## What It Does
+
+Given a directory containing a buggy Python file and a pytest test suite, the framework:
+
+1. Runs the tests to capture the current failure state.
+2. Builds a structured prompt from the failing test output and the buggy source code.
+3. Calls an LLM (currently Gemini 2.0 Flash) and extracts the proposed patch.
+4. Validates the patch's syntax, applies it, and re-runs the tests.
+5. If all tests pass, the repair is complete. If they still fail, the original file is restored and the iteration repeats up to a configurable maximum.
+
+Every run produces a structured JSON log under `experiments/` capturing the full prompt, LLM response, test counts before and after each patch, timing, and any errors encountered.
+
+---
+
+## Project Status
+
+**Phase 1 — MVP complete.** The single-model repair loop is working end-to-end: runner, prompt builder, LLM client, patcher, and result logger are all implemented and tested against the `mini_bugs` dataset. Subsequent phases (iterative control, overfitting detection, multi-model benchmarking, stability analysis) are planned — see the [Roadmap](#roadmap) below.
+
+---
+
+## Architecture Overview
+
+The framework is composed of five modules that form a linear pipeline:
+
+```
+datasets/case_XXX/
+  buggy.py + test_*.py
+        |
+        v
+  [Runner]  — runs pytest, parses JUnit XML, returns PytestSummary
+        |
+        v
+  [Prompt]  — builds the LLM repair prompt from source + failure output
+        |
+        v
+  [LLM]     — calls Gemini API, extracts fenced code block from response
+        |
+        v
+  [Patcher] — validates syntax, backs up original, writes new source;
+              rolls back if post-patch tests still fail
+        |
+        v
+  [Logger]  — serialises IterationLog + RepairResult to JSON
+        |
+        v
+  experiments/case_XXX/<run-id>/
+    junit.xml + result.json
+```
+
+| Module | File | Responsibility |
+|---|---|---|
+| Runner | `src/ai_code_repair/runner/runner.py` | Execute pytest, parse JUnit XML, return `RunReport` |
+| Report types | `src/ai_code_repair/runner/report.py` | `PytestSummary` and `RunReport` dataclasses |
+| Prompt | `src/ai_code_repair/repair/prompt.py` | Summarise failures, build LLM prompt string |
+| LLM client | `src/ai_code_repair/repair/llm.py` | Wrap Gemini API, extract code from fenced response |
+| Patcher | `src/ai_code_repair/repair/patcher.py` | Syntax-validate, backup, apply, and roll back patches |
+| Logger | `src/ai_code_repair/repair/log.py` | `IterationLog` and `RepairResult` dataclasses with JSON serialisation |
+| Loop | `src/ai_code_repair/repair/loop.py` | Orchestrate the full repair loop using the modules above |
+
+---
+
+## Setup
+
+**Prerequisites**
+
+- Python 3.11 or newer
+- A [Google AI Studio](https://aistudio.google.com/) API key for Gemini
+
+**Install**
+
+```bash
+git clone <repo-url>
+cd ai-code-repair
+
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+pip install -e .
+```
+
+**Environment variables**
+
+Create a `.env` file in the project root:
+
+```
+GEMINI_API_KEY=your_key_here
+```
+
+`scripts/repair.py` calls `load_dotenv()` on startup, so the key is picked up automatically. Alternatively, export it directly in your shell.
+
+---
+
+## Usage
+
+```bash
+python scripts/repair.py --case datasets/mini_bugs/case_001
+```
+
+Run up to three repair iterations:
+
+```bash
+python scripts/repair.py --case datasets/mini_bugs/case_001 --max-iterations 3
+```
+
+Set a custom test timeout (default is 120 seconds):
+
+```bash
+python scripts/repair.py --case datasets/mini_bugs/case_002 --timeout 60
+```
+
+**Console output**
+
+```
+[REPAIRED] datasets/mini_bugs/case_001 — 1 iteration(s)
+Result saved to experiments/
+```
+
+Possible status labels:
+
+| Label | Meaning |
+|---|---|
+| `[ALREADY PASSING]` | All tests passed before any LLM call was made |
+| `[REPAIRED]` | At least one patch attempt succeeded |
+| `[FAILED]` | No patch produced a fully passing suite within the iteration limit |
+
+---
+
+## Dataset Format
+
+Each bug case is a self-contained directory:
+
+```
+datasets/mini_bugs/case_001/
+    buggy.py        # the file the LLM is asked to repair
+    test_buggy.py   # pytest test suite (any file matching test_*.py is discovered)
+    meta.json       # metadata consumed by the framework
+```
+
+`meta.json` schema:
+
+```json
+{
+  "target_file": "buggy.py",
+  "description": "swapped + and - operators in add and subtract functions"
+}
+```
+
+- `target_file` — filename (relative to the case directory) that will be patched. This is the only required field.
+- `description` — human-readable note about the bug; not used by the framework but useful for dataset curation.
+
+The test files must be runnable with `pytest` from inside the case directory with no additional configuration.
+
+---
+
+## Output
+
+Each run writes to a timestamped subdirectory:
+
+```
+experiments/
+  case_001/
+    20260303T095650Z/
+      junit.xml       # raw pytest JUnit XML from the final test run
+      result.json     # full structured result (see schema below)
+```
+
+**`result.json` top-level fields**
+
+| Field | Type | Description |
+|---|---|---|
+| `case_path` | string | Absolute path to the case directory |
+| `target_file` | string | File that was patched |
+| `model` | string | LLM model identifier used |
+| `success` | bool | Whether all tests passed at the end |
+| `total_iterations` | int | Number of LLM calls attempted |
+| `initial_summary` | object | Test counts before any patching |
+| `final_summary` | object | Test counts after the last run |
+| `total_duration_seconds` | float | Wall time for the entire run |
+| `iterations` | array | Per-iteration detail (see below) |
+| `fatal_error_type` | string\|null | Exception class name if the loop crashed |
+| `fatal_error_message` | string\|null | Exception message if the loop crashed |
+
+Each element in `iterations` records: the iteration number, the full prompt sent, the raw LLM response, whether the patch was applied, pre- and post-patch test summaries, duration, model name, and any LLM errors with retry counts.
+
+---
+
+## Project Structure
+
+```
+.
+├── datasets/
+│   └── mini_bugs/
+│       ├── case_001/           # buggy.py, test_buggy.py, meta.json
+│       └── case_002/           # lset.py, test_lset.py, meta.json
+├── experiments/                # auto-created; one subdir per run
+├── scripts/
+│   └── repair.py               # CLI entry point
+├── src/
+│   └── ai_code_repair/
+│       ├── repair/
+│       │   ├── __init__.py
+│       │   ├── llm.py          # GeminiClient
+│       │   ├── log.py          # IterationLog, RepairResult
+│       │   ├── loop.py         # RepairLoop, RepairConfig
+│       │   ├── patcher.py      # apply_patch, rollback
+│       │   └── prompt.py       # build_prompt, summarize_failures
+│       └── runner/
+│           ├── __init__.py
+│           ├── report.py       # PytestSummary, RunReport
+│           └── runner.py       # run_pytest_case
+├── PROJECT_SPEC.md             # full research specification
+├── pyproject.toml
+└── README.md
+```
+
+---
+
+## Roadmap
+
+The project follows a six-phase research plan. See `PROJECT_SPEC.md` for the full specification.
+
+- [x] **Phase 1 — Minimal Repair Loop**: single-model end-to-end repair, JUnit XML parsing, JSON logging, `mini_bugs` dataset.
+- [ ] **Phase 2 — Iterative Repair Framework**: structured iteration control, early stopping, temperature tuning, deterministic vs. stochastic runs.
+- [ ] **Phase 3 — Overfitting Detection**: hidden test cases, mutation testing, test amplification to catch patches that game the visible suite.
+- [ ] **Phase 4 — Multi-Model Benchmarking**: compare GPT-class models, Claude, and Gemini under identical conditions; standardised metrics table.
+- [ ] **Phase 5 — Stability Analysis**: run identical cases 10+ times per model, measure patch similarity, success consistency, and variance.
+- [ ] **Phase 6 — Dataset Scaling**: expand from `mini_bugs` to larger public benchmarks; evaluate cost and scalability.
+
+---
+
+*Author: Minkyu SHIM — EPITA, Computer Science*
