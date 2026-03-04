@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -9,7 +10,7 @@ from typing import Any
 
 from ai_code_repair.repair.llm import GeminiClient
 from ai_code_repair.repair.log import IterationLog, RepairResult
-from ai_code_repair.repair.patcher import apply_patch, rollback
+from ai_code_repair.repair.patcher import apply_patch
 from ai_code_repair.repair.prompt import build_prompt, summarize_failures
 from ai_code_repair.runner.report import RunReport
 from ai_code_repair.runner.runner import run_pytest_case
@@ -36,7 +37,13 @@ class RepairLoop:
 
         # 2. Create a timestamped report directory under experiments/.
         run_id = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        report_dir = Path("experiments") / case_dir.name / run_id
+        report_dir = (Path("experiments") / case_dir.name / run_id).resolve()
+
+        # Copy the case directory into an isolated workspace so the
+        # original dataset is never modified.
+        report_dir.mkdir(parents=True, exist_ok=True)
+        workspace_dir = report_dir / "workspace"
+        shutil.copytree(case_dir, workspace_dir)
 
         start_total = time.perf_counter()
         target_file = "<unknown>"
@@ -58,11 +65,17 @@ class RepairLoop:
             # 1. Load meta.json to discover the target file.
             meta = json.loads((case_dir / "meta.json").read_text(encoding="utf-8"))
             target_file = meta["target_file"]
-            target_path = case_dir / target_file
+            target_path = workspace_dir / target_file
+
+            # Save a frozen copy of the original source for rollback.
+            original_snapshot = workspace_dir / (
+                Path(target_file).stem + "_original" + Path(target_file).suffix
+            )
+            shutil.copy2(target_path, original_snapshot)
 
             # 3. Run baseline pytest.
             latest_report: RunReport = run_pytest_case(
-                case_dir, report_dir, timeout_seconds=config.timeout_seconds
+                workspace_dir, report_dir, timeout_seconds=config.timeout_seconds
             )
             initial_summary = latest_report.summary
             initial_summary_dict = asdict(initial_summary)
@@ -127,10 +140,9 @@ class RepairLoop:
 
                 patch_applied = False
                 post_summary_dict: dict[str, Any] | None = None
-                backup: Path | None = None
 
                 try:
-                    backup = apply_patch(target_path, new_source)
+                    apply_patch(target_path, new_source)
                     patch_applied = True
                 except SyntaxError:
                     # LLM produced syntactically invalid code — log and continue.
@@ -154,27 +166,22 @@ class RepairLoop:
                 # Run tests against the patched file.
                 try:
                     post_report = run_pytest_case(
-                        case_dir, report_dir, timeout_seconds=config.timeout_seconds
+                        workspace_dir, report_dir, timeout_seconds=config.timeout_seconds
                     )
                     post_summary_obj = post_report.summary
                     post_summary_dict = asdict(post_summary_obj)
                     tests_pass = post_summary_obj.failed == 0 and post_summary_obj.errors == 0
 
                     if tests_pass:
-                        # Clean up the backup — we're done.
-                        if backup is not None and backup.exists():
-                            backup.unlink()
                         current_summary_dict = post_summary_dict
                         latest_report = post_report
                         success = True
                     else:
                         # Patch did not fix all failures — restore the original.
-                        if backup is not None:
-                            rollback(target_path, backup)
+                        shutil.copy2(original_snapshot, target_path)
                         latest_report = post_report
                 except Exception:
-                    if backup is not None:
-                        rollback(target_path, backup)
+                    shutil.copy2(original_snapshot, target_path)
                     raise
 
                 iter_duration = time.perf_counter() - iter_start

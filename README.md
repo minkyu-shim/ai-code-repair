@@ -10,9 +10,9 @@ Given a directory containing a buggy Python file and a pytest test suite, the fr
 
 1. Runs the tests to capture the current failure state.
 2. Builds a structured prompt from the failing test output and the buggy source code.
-3. Calls an LLM (currently Gemini 2.0 Flash) and extracts the proposed patch.
-4. Validates the patch's syntax, applies it, and re-runs the tests.
-5. If all tests pass, the repair is complete. If they still fail, the original file is restored and the iteration repeats up to a configurable maximum.
+3. Calls an LLM (currently Gemini 2.5 Flash) and extracts the proposed patch.
+4. Validates the patch's syntax, applies it inside an isolated workspace directory, and re-runs the tests.
+5. If all tests pass, the repair is complete. If they still fail, the workspace copy is restored from the frozen original snapshot and the iteration repeats up to a configurable maximum. The `datasets/` directory is never modified.
 
 Every run produces a structured JSON log under `experiments/` capturing the full prompt, LLM response, test counts before and after each patch, timing, and any errors encountered.
 
@@ -30,10 +30,14 @@ The framework is composed of five modules that form a linear pipeline:
 
 ```
 datasets/case_XXX/
-  buggy.py + test_*.py
+  buggy.py + test_*.py          ← never modified
+        |
+        v (copied at run start)
+  experiments/case_XXX/<run-id>/workspace/
+  buggy.py + buggy_original.py + test_*.py + meta.json
         |
         v
-  [Runner]  — runs pytest, parses JUnit XML, returns PytestSummary
+  [Runner]  — runs pytest inside workspace/, parses JUnit XML, returns PytestSummary
         |
         v
   [Prompt]  — builds the LLM repair prompt from source + failure output
@@ -42,15 +46,15 @@ datasets/case_XXX/
   [LLM]     — calls Gemini API, extracts fenced code block from response
         |
         v
-  [Patcher] — validates syntax, backs up original, writes new source;
-              rolls back if post-patch tests still fail
+  [Patcher] — validates syntax, writes patch to workspace/buggy.py;
+              restores from buggy_original.py if post-patch tests still fail
         |
         v
   [Logger]  — serialises IterationLog + RepairResult to JSON
         |
         v
   experiments/case_XXX/<run-id>/
-    junit.xml + result.json
+    workspace/  junit.xml  result.json
 ```
 
 | Module | File | Responsibility |
@@ -59,7 +63,7 @@ datasets/case_XXX/
 | Report types | `src/ai_code_repair/runner/report.py` | `PytestSummary` and `RunReport` dataclasses |
 | Prompt | `src/ai_code_repair/repair/prompt.py` | Summarise failures, build LLM prompt string |
 | LLM client | `src/ai_code_repair/repair/llm.py` | Wrap Gemini API, extract code from fenced response |
-| Patcher | `src/ai_code_repair/repair/patcher.py` | Syntax-validate, backup, apply, and roll back patches |
+| Patcher | `src/ai_code_repair/repair/patcher.py` | Syntax-validate and apply patches to the workspace copy; rollback restores from `buggy_original.py` |
 | Logger | `src/ai_code_repair/repair/log.py` | `IterationLog` and `RepairResult` dataclasses with JSON serialisation |
 | Loop | `src/ai_code_repair/repair/loop.py` | Orchestrate the full repair loop using the modules above |
 
@@ -160,14 +164,19 @@ The test files must be runnable with `pytest` from inside the case directory wit
 
 ## Output
 
-Each run writes to a timestamped subdirectory:
+Each run writes to a timestamped subdirectory. All patching and test execution happen inside the `workspace/` subdirectory, so the original `datasets/` files are never modified.
 
 ```
 experiments/
   case_001/
     20260303T095650Z/
-      junit.xml       # raw pytest JUnit XML from the final test run
-      result.json     # full structured result (see schema below)
+      workspace/
+        buggy.py              # working copy (final patched state after repair)
+        buggy_original.py     # frozen snapshot of the original buggy file
+        test_buggy.py         # copy of the test suite
+        meta.json             # copy of case metadata
+      junit.xml               # raw pytest JUnit XML from the final test run
+      result.json             # full structured result (see schema below)
 ```
 
 **`result.json` top-level fields**
@@ -208,7 +217,7 @@ Each element in `iterations` records: the iteration number, the full prompt sent
 │       │   ├── llm.py          # GeminiClient
 │       │   ├── log.py          # IterationLog, RepairResult
 │       │   ├── loop.py         # RepairLoop, RepairConfig
-│       │   ├── patcher.py      # apply_patch, rollback
+│       │   ├── patcher.py      # apply_patch (workspace-scoped; no .bak files)
 │       │   └── prompt.py       # build_prompt, summarize_failures
 │       └── runner/
 │           ├── __init__.py

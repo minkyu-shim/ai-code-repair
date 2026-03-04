@@ -1,0 +1,51 @@
+{
+  "case_path": "/Users/minkyu/base/03-personal-project/01-ai-code-repair/datasets/mini_bugs/case_001",
+  "target_file": "buggy.py",
+  "model": "gemini-2.5-flash",
+  "success": true,
+  "total_iterations": 1,
+  "iterations": [
+    {
+      "iteration": 1,
+      "prompt": "You are an expert Python debugger. Your task is to fix a buggy Python file so that its test suite passes.\n\n## File: buggy.py\n\n```python\n\"\"\"\nI will write 10-20 small cases that contains python bugs in this file\nRun test cases at ./test_buggy.py then\nThe meta datas will be saved in ./meta.json\n\"\"\"\n\ndef add(x: int, y: int) -> int:\n    return x - y\n\ndef subtract(x: int, y: int) -> int:\n    return x + y\n\n\n```\n\n## Failing test output\n\n```\nFAILED experiments.case_001.20260304T172200Z.workspace.test_buggy.test_add_basic: def test_add_basic():\n>       assert add(2, 3) == 5\nE       assert -1 == 5\nE        +  where -1 = add(2, 3)\n\n../../../../datasets/mini_bugs/case_001/test_buggy.py:9: AssertionError\nFAILED experiments.case_001.20260304T172200Z.workspace.test_buggy.test_add_negative: def test_add_negative():\n>       assert add(-2, 3)== 1\nE       assert -5 == 1\nE        +  where -5 = add(-2, 3)\n\n../../../../datasets/mini_bugs/case_001/test_buggy.py:15: AssertionError\nFAILED experiments.case_001.20260304T172200Z.workspace.test_buggy.test_subtract_basic: def test_subtract_basic():\n>       assert subtract(3, 1) == 2\nE       assert 4 == 2\nE        +  where 4 = subtract(3, 1)\n\n../../../../datasets/mini_bugs/case_001/test_buggy.py:18: AssertionError\nFAILED experiments.case_001.20260304T172200Z.workspace.test_buggy.test_subtract_negative: def test_subtract_negative():\n>       assert subtract(4, -9) == 13\nE       assert -5 == 13\nE        +  where -5 = subtract(4, -9)\n\n../../../../datasets/mini_bugs/case_001/test_buggy.py:24: AssertionError\n```\n\n## Instructions\n\n- Analyse the failing tests and identify the bug(s) in the source above.\n- Return ONLY the complete, corrected Python source code.\n- Wrap your answer in a single ```python ... ``` fenced code block.\n- Do NOT include any explanation, commentary, or additional text \u2014 only the fixed code inside the fence.\n",
+      "llm_response": "```python\n\"\"\"\nI will write 10-20 small cases that contains python bugs in this file\nRun test cases at ./test_buggy.py then\nThe meta datas will be saved in ./meta.json\n\"\"\"\n\ndef add(x: int, y: int) -> int:\n    return x + y\n\ndef subtract(x: int, y: int) -> int:\n    return x - y\n```",
+      "patch_applied": true,
+      "pre_patch_summary": {
+        "total": 6,
+        "passed": 2,
+        "failed": 4,
+        "errors": 0,
+        "skipped": 0
+      },
+      "post_patch_summary": {
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "duration_seconds": 4.123748957994394,
+      "model": "gemini-2.5-flash",
+      "llm_error_type": null,
+      "llm_error_message": null,
+      "llm_retry_count": 0
+    }
+  ],
+  "initial_summary": {
+    "total": 6,
+    "passed": 2,
+    "failed": 4,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "total_duration_seconds": 4.285069250006927,
+  "fatal_error_type": null,
+  "fatal_error_message": null
+}
