@@ -1,0 +1,45 @@
+{
+  "case_path": "/Users/minkyu/base/03-personal-project/01-ai-code-repair/datasets/mini_bugs/case_001",
+  "target_file": "buggy.py",
+  "model": "gemini-3.0-flash",
+  "success": false,
+  "total_iterations": 1,
+  "iterations": [
+    {
+      "iteration": 1,
+      "prompt": "You are an expert Python debugger. Your task is to fix a buggy Python file so that its test suite passes.\n\n## File: buggy.py\n\n```python\n\"\"\"\nI will write 10-20 small cases that contains python bugs in this file\nRun test cases at ./test_buggy.py then\nThe meta datas will be saved in ./meta.json\n\"\"\"\n\ndef add(x: int, y: int) -> int:\n    return x - y\n\ndef subtract(x: int, y: int) -> int:\n    return x + y\n\n```\n\n## Failing test output\n\n```\nFAILED datasets.mini_bugs.case_001.test_buggy.test_add_basic: def test_add_basic():\n>       assert add(2, 3) == 5\nE       assert -1 == 5\nE        +  where -1 = add(2, 3)\n\ntest_buggy.py:9: AssertionError\nFAILED datasets.mini_bugs.case_001.test_buggy.test_add_negative: def test_add_negative():\n>       assert add(-2, 3)== 1\nE       assert -5 == 1\nE        +  where -5 = add(-2, 3)\n\ntest_buggy.py:15: AssertionError\nFAILED datasets.mini_bugs.case_001.test_buggy.test_subtract_basic: def test_subtract_basic():\n>       assert subtract(3, 1) == 2\nE       assert 4 == 2\nE        +  where 4 = subtract(3, 1)\n\ntest_buggy.py:18: AssertionError\nFAILED datasets.mini_bugs.case_001.test_buggy.test_subtract_negative: def test_subtract_negative():\n>       assert subtract(4, -9) == 13\nE       assert -5 == 13\nE        +  where -5 = subtract(4, -9)\n\ntest_buggy.py:24: AssertionError\n```\n\n## Instructions\n\n- Analyse the failing tests and identify the bug(s) in the source above.\n- Return ONLY the complete, corrected Python source code.\n- Wrap your answer in a single ```python ... ``` fenced code block.\n- Do NOT include any explanation, commentary, or additional text \u2014 only the fixed code inside the fence.\n",
+      "llm_response": "",
+      "patch_applied": false,
+      "pre_patch_summary": {
+        "total": 6,
+        "passed": 2,
+        "failed": 4,
+        "errors": 0,
+        "skipped": 0
+      },
+      "post_patch_summary": null,
+      "duration_seconds": 3.1775469580024946,
+      "model": "gemini-3.0-flash",
+      "llm_error_type": "ClientError",
+      "llm_error_message": "404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-3.0-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}",
+      "llm_retry_count": 2
+    }
+  ],
+  "initial_summary": {
+    "total": 6,
+    "passed": 2,
+    "failed": 4,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_summary": {
+    "total": 6,
+    "passed": 2,
+    "failed": 4,
+    "errors": 0,
+    "skipped": 0
+  },
+  "total_duration_seconds": 3.3577835829928517,
+  "fatal_error_type": null,
+  "fatal_error_message": null
+}

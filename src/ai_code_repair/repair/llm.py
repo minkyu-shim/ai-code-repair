@@ -6,7 +6,7 @@ from google import genai
 
 
 class GeminiClient:
-    MODEL = "gemini-2.0-flash"
+    MODEL = "gemini-2.5-flash"
 
     def __init__(self) -> None:
         # Reads GEMINI_API_KEY from the environment automatically.
