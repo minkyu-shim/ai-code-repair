@@ -22,6 +22,19 @@ Every run produces a structured JSON log under `experiments/` capturing the full
 
 **Phase 1 — MVP complete.** The single-model repair loop is working end-to-end: runner, prompt builder, LLM client, patcher, and result logger are all implemented and tested against the `mini_bugs` dataset. Subsequent phases (iterative control, overfitting detection, multi-model benchmarking, stability analysis) are planned — see the [Roadmap](#roadmap) below.
 
+## Phase 1 Acceptance Criteria
+
+The following criteria confirm Phase 1 (Minimal Repair Loop) is complete:
+
+- [x] Pytest runner executes and parses JUnit XML results (`src/ai_code_repair/runner/runner.py`)
+- [x] LLM patch generator sends structured prompts to Gemini 2.5 and returns candidate patches (`src/ai_code_repair/repair/llm.py`)
+- [x] Patch applier applies patches with syntax validation and rollback support (`src/ai_code_repair/repair/patcher.py`)
+- [x] Iterative repair loop: test → patch → re-test, up to N iterations (`src/ai_code_repair/repair/loop.py`)
+- [x] Experiment logger emits `result.json` per run with iteration logs (`src/ai_code_repair/repair/log.py`)
+- [x] Workspace isolation: `datasets/` is never modified; each run copies to `experiments/<case>/<run_id>/workspace/` (`src/ai_code_repair/repair/loop.py`)
+- [x] 2/2 mini bug cases repaired successfully (failures reduced to 0, `success: true` in result.json)
+- [x] Rollback verified: failed patches are reverted to original snapshot before next iteration
+
 ---
 
 ## Architecture Overview
@@ -183,7 +196,7 @@ experiments/
 
 | Field | Type | Description |
 |---|---|---|
-| `case_path` | string | Absolute path to the case directory |
+| `case_path` | string | Path to the case directory (relative to project root) |
 | `target_file` | string | File that was patched |
 | `model` | string | LLM model identifier used |
 | `success` | bool | Whether all tests passed at the end |

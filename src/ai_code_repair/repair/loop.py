@@ -8,12 +8,23 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ai_code_repair.repair._project_root import find_project_root
 from ai_code_repair.repair.llm import GeminiClient
 from ai_code_repair.repair.log import IterationLog, RepairResult
 from ai_code_repair.repair.patcher import apply_patch
 from ai_code_repair.repair.prompt import build_prompt, summarize_failures
 from ai_code_repair.runner.report import RunReport
 from ai_code_repair.runner.runner import run_pytest_case
+
+
+def _relative_case_path(case_dir: Path) -> str:
+    """Return case_dir as a path relative to the project root, or absolute if
+    the relative conversion is not possible."""
+    try:
+        root = find_project_root()
+        return str(case_dir.relative_to(root))
+    except (ValueError, FileNotFoundError):
+        return str(case_dir)
 
 
 @dataclass
@@ -206,7 +217,7 @@ class RepairLoop:
         total_duration = time.perf_counter() - start_total
 
         result = RepairResult(
-            case_path=str(case_dir),
+            case_path=_relative_case_path(case_dir),
             target_file=target_file,
             model=config.model,
             success=success,
