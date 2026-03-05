@@ -68,6 +68,7 @@ def run_pytest_case(
         *,
         pytest_args: Tuple[str, ...] = (),
         timeout_seconds: int = 120,
+        junit_stem: str = "junit",
 ) -> RunReport:
     """
     Run pytest inside `case_dir`, write junit.xml to `report_dir`,
@@ -77,7 +78,7 @@ def run_pytest_case(
     report_dir = report_dir.resolve()
     report_dir.mkdir(parents=True, exist_ok=True)
 
-    junit_xml_path = report_dir / "junit.xml"
+    junit_xml_path = report_dir / f"{junit_stem}.xml"
     cmd = _build_pytest_cmd(junit_xml_path, pytest_args)
 
     start = time.perf_counter()

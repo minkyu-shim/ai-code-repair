@@ -27,6 +27,8 @@ class IterationLog:
     llm_error_type: str | None = None
     llm_error_message: str | None = None
     llm_retry_count: int = 0
+    extraction_failed: bool = False
+    junit_xml_path: str | None = None
     context_strategy: str = "original_with_failures"
 
     def to_dict(self) -> dict[str, Any]:

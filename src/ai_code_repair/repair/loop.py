@@ -41,7 +41,7 @@ class RepairConfig:
 class RepairLoop:
     def __init__(self, config: RepairConfig) -> None:
         self._config = config
-        self._client = GeminiClient()
+        self._client = GeminiClient(model=config.model)
 
     def run(self) -> RepairResult:
         config = self._config
@@ -120,6 +120,7 @@ class RepairLoop:
                 prompt = build_prompt(source_code, test_summary, target_file)
                 raw_response = ""
                 new_source = ""
+                extraction_failed = False
                 llm_error_type: str | None = None
                 llm_error_message: str | None = None
                 llm_retry_count = 0
@@ -127,7 +128,7 @@ class RepairLoop:
                 for attempt in range(config.llm_max_retries + 1):
                     try:
                         raw_response = self._client.generate(prompt)
-                        new_source = GeminiClient.extract_code(raw_response)
+                        new_source, extraction_failed = GeminiClient.extract_code(raw_response)
                         llm_retry_count = attempt
                         break
                     except Exception as exc:
@@ -154,6 +155,8 @@ class RepairLoop:
                         llm_error_type=llm_error_type,
                         llm_error_message=llm_error_message,
                         llm_retry_count=llm_retry_count,
+                        extraction_failed=False,
+                        junit_xml_path=None,
                         context_strategy=config.context_strategy.value,
                     )
                     iteration_logs.append(log.to_dict())
@@ -181,6 +184,8 @@ class RepairLoop:
                         llm_error_type=llm_error_type,
                         llm_error_message=llm_error_message,
                         llm_retry_count=llm_retry_count,
+                        extraction_failed=extraction_failed,
+                        junit_xml_path=None,
                         context_strategy=config.context_strategy.value,
                     )
                     iteration_logs.append(log.to_dict())
@@ -189,7 +194,8 @@ class RepairLoop:
                 # Run tests against the patched file.
                 try:
                     post_report = run_pytest_case(
-                        workspace_dir, report_dir, timeout_seconds=config.timeout_seconds
+                        workspace_dir, report_dir, timeout_seconds=config.timeout_seconds,
+                        junit_stem=f"junit_iter{iteration:03d}",
                     )
                     post_summary_obj = post_report.summary
                     post_summary_dict = asdict(post_summary_obj)
@@ -220,6 +226,8 @@ class RepairLoop:
                     llm_error_type=llm_error_type,
                     llm_error_message=llm_error_message,
                     llm_retry_count=llm_retry_count,
+                    extraction_failed=extraction_failed,
+                    junit_xml_path=str(post_report.junit_xml_path),
                     context_strategy=config.context_strategy.value,
                 )
                 iteration_logs.append(log.to_dict())

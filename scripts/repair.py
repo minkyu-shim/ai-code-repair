@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from ai_code_repair.repair import ContextStrategy, RepairConfig, RepairLoop
+from ai_code_repair.repair.llm import GeminiClient
 
 
 def main() -> None:
@@ -21,6 +22,12 @@ def main() -> None:
     parser.add_argument("--case", required=True, type=Path)
     parser.add_argument("--max-iterations", type=int, default=1)
     parser.add_argument("--timeout", type=int, default=120)
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=GeminiClient.MODEL,
+        help="Gemini model ID to use for code generation (default: %(default)s)",
+    )
     parser.add_argument(
         "--context-strategy",
         choices=[s.value for s in ContextStrategy],
@@ -32,6 +39,7 @@ def main() -> None:
     config = RepairConfig(
         case_dir=args.case,
         max_iterations=args.max_iterations,
+        model=args.model,
         timeout_seconds=args.timeout,
         context_strategy=ContextStrategy(args.context_strategy),
     )
