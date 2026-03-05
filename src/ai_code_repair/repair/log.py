@@ -2,8 +2,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
+
+
+class ContextStrategy(str, Enum):
+    """Strategy for what context to feed the LLM on retry iterations."""
+
+    ORIGINAL_WITH_FAILURES = "original_with_failures"
+    LAST_PATCH_WITH_FAILURES = "last_patch_with_failures"
 
 
 @dataclass
@@ -19,6 +27,7 @@ class IterationLog:
     llm_error_type: str | None = None
     llm_error_message: str | None = None
     llm_retry_count: int = 0
+    context_strategy: str = "original_with_failures"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -35,6 +44,7 @@ class RepairResult:
     initial_summary: dict[str, Any]
     final_summary: dict[str, Any]
     total_duration_seconds: float
+    context_strategy: str = "original_with_failures"
     fatal_error_type: str | None = None
     fatal_error_message: str | None = None
 
