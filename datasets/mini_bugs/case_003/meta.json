@@ -1,0 +1,26 @@
+{
+  "target_file": "buggy.py",
+  "case_id": "case_003",
+  "description": "Inventory order processing with three interdependent computational bugs",
+  "num_bug_sites": 3,
+  "expected_min_iterations": 2,
+  "has_hidden_tests": true,
+  "loc": 55,
+  "bugs": [
+    {
+      "function": "calculate_total",
+      "bug_type": "off-by-one",
+      "bug_location": "conditional-branch"
+    },
+    {
+      "function": "apply_tax",
+      "bug_type": "wrong-formula",
+      "bug_location": "arithmetic-expression"
+    },
+    {
+      "function": "process_order",
+      "bug_type": "wrong-formula",
+      "bug_location": "arithmetic-expression"
+    }
+  ]
+}

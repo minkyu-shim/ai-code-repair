@@ -1,0 +1,31 @@
+{
+  "target_file": "buggy.py",
+  "case_id": "case_004",
+  "description": "Run-length encoding module with four cascading bugs across encode, decode, compress_ratio, and most_frequent_run. Fixing encode exposes hidden bugs in dependent functions.",
+  "num_bug_sites": 4,
+  "expected_min_iterations": 3,
+  "has_hidden_tests": true,
+  "loc": 82,
+  "bugs": [
+    {
+      "function": "encode",
+      "bug_type": "missing-initialization",
+      "bug_location": "loop-body"
+    },
+    {
+      "function": "decode",
+      "bug_type": "off-by-one",
+      "bug_location": "loop-body"
+    },
+    {
+      "function": "compress_ratio",
+      "bug_type": "wrong-formula",
+      "bug_location": "arithmetic-expression"
+    },
+    {
+      "function": "most_frequent_run",
+      "bug_type": "wrong-operator",
+      "bug_location": "conditional-branch"
+    }
+  ]
+}

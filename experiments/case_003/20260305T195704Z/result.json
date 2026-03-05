@@ -1,0 +1,53 @@
+{
+  "case_path": "datasets/mini_bugs/case_003",
+  "target_file": "buggy.py",
+  "model": "gemini-2.5-flash",
+  "success": true,
+  "total_iterations": 1,
+  "iterations": [
+    {
+      "iteration": 1,
+      "prompt": "You are an expert Python debugger. Your task is to fix a buggy Python file so that its test suite passes.\n\n## File: buggy.py\n\n```python\n\"\"\"\nInventory order processing module.\n\nProvides functions to calculate order totals with bulk discounts,\napply tax, and process complete orders.\n\nBulk discount rule: 10% off any line item where quantity >= 5.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef calculate_total(items: list[tuple[str, float, int]]) -> float:\n    \"\"\"Calculate the total cost of items with bulk discount.\n\n    Each item is a (name, price, quantity) tuple.\n    A 10% discount is applied to any line item where quantity >= 5.\n\n    Returns the total rounded to 2 decimal places.\n    \"\"\"\n    total = 0.0\n    for name, price, quantity in items:\n        line_cost = price * quantity\n        if quantity > 5:\n            line_cost *= 0.9\n        total += line_cost\n    return round(total, 2)\n\n\ndef apply_tax(subtotal: float, tax_rate: float) -> float:\n    \"\"\"Apply tax to a subtotal and return the grand total.\n\n    tax_rate is expressed as a decimal (e.g., 0.08 for 8%).\n    Returns the result rounded to 2 decimal places.\n    \"\"\"\n    return round(subtotal + tax_rate, 2)\n\n\ndef process_order(\n    items: list[tuple[str, float, int]], tax_rate: float\n) -> dict[str, float]:\n    \"\"\"Process a complete order.\n\n    Computes the discounted subtotal, tax amount, and grand total.\n    Returns a dict with keys: \"subtotal\", \"tax\", \"total\".\n    \"\"\"\n    raw_sum = sum(price * quantity for name, price, quantity in items)\n    subtotal = calculate_total(items)\n    total = apply_tax(subtotal, tax_rate)\n    tax = raw_sum * tax_rate\n    return {\n        \"subtotal\": subtotal,\n        \"tax\": round(tax, 2),\n        \"total\": total,\n    }\n\n```\n\n## Failing test output\n\n```\nFAILED experiments.case_003.20260305T195704Z.workspace.test_buggy.test_calculate_total_with_discount: def test_calculate_total_with_discount():\n        \"\"\"Items with quantity >= 5 receive a 10% discount on that line.\"\"\"\n        items = [(\"pen\", 2.0, 5)]\n        # 2*5 = 10, 10% off -> 9.0\n>       assert calculate_total(items) == 9.0\nE       AssertionError: assert 10.0 == 9.0\nE        +  where 10.0 = ... (truncated)\nFAILED experiments.case_003.20260305T195704Z.workspace.test_buggy.test_calculate_total_exact_threshold: def test_calculate_total_exact_threshold():\n        \"\"\"Quantity of exactly 5 should trigger the bulk discount.\"\"\"\n        items = [(\"widget\", 10.0, 5)]\n        # 10*5 = 50, 10% off -> 45.0\n>       assert calculate_total(items) == 45.0\nE       AssertionError: assert 50.0 == 45.0\nE        +  where 50.... (truncated)\nFAILED experiments.case_003.20260305T195704Z.workspace.test_buggy.test_apply_tax_standard: def test_apply_tax_standard():\n        \"\"\"Standard 8% tax on 100.\"\"\"\n>       assert apply_tax(100.0, 0.08) == 108.0\nE       assert 100.08 == 108.0\nE        +  where 100.08 = apply_tax(100.0, 0.08)\n\n../../../../datasets/mini_bugs/case_003/test_buggy.py:51: AssertionError\nFAILED experiments.case_003.20260305T195704Z.workspace.test_buggy.test_apply_tax_zero_subtotal: def test_apply_tax_zero_subtotal():\n        \"\"\"Zero subtotal with any tax rate is still zero.\"\"\"\n>       assert apply_tax(0.0, 0.1) == 0.0\nE       assert 0.1 == 0.0\nE        +  where 0.1 = apply_tax(0.0, 0.1)\n\n../../../../datasets/mini_bugs/case_003/test_buggy.py:61: AssertionError\nFAILED experiments.case_003.20260305T195704Z.workspace.test_buggy.test_apply_tax_rounding: def test_apply_tax_rounding():\n        \"\"\"Result should be rounded to 2 decimal places.\"\"\"\n        # 33.33 * 1.07 = 35.6631 -> 35.66\n>       assert apply_tax(33.33, 0.07) == 35.66\nE       assert 33.4 == 35.66\nE        +  where 33.4 = apply_tax(33.33, 0.07)\n\n../../../../datasets/mini_bugs/case_003/te... (truncated)\nFAILED experim... (truncated)\n```\n\n## Instructions\n\n- Analyse the failing tests and identify the bug(s) in the source above.\n- Return ONLY the complete, corrected Python source code.\n- Wrap your answer in a single ```python ... ``` fenced code block.\n- Do NOT include any explanation, commentary, or additional text \u2014 only the fixed code inside the fence.\n",
+      "llm_response": "```python\n\"\"\"\nInventory order processing module.\n\nProvides functions to calculate order totals with bulk discounts,\napply tax, and process complete orders.\n\nBulk discount rule: 10% off any line item where quantity >= 5.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef calculate_total(items: list[tuple[str, float, int]]) -> float:\n    \"\"\"Calculate the total cost of items with bulk discount.\n\n    Each item is a (name, price, quantity) tuple.\n    A 10% discount is applied to any line item where quantity >= 5.\n\n    Returns the total rounded to 2 decimal places.\n    \"\"\"\n    total = 0.0\n    for name, price, quantity in items:\n        line_cost = price * quantity\n        if quantity >= 5:  # Changed from '>' to '>=' to include quantity of 5 for discount\n            line_cost *= 0.9\n        total += line_cost\n    return round(total, 2)\n\n\ndef apply_tax(subtotal: float, tax_rate: float) -> float:\n    \"\"\"Apply tax to a subtotal and return the grand total.\n\n    tax_rate is expressed as a decimal (e.g., 0.08 for 8%).\n    Returns the result rounded to 2 decimal places.\n    \"\"\"\n    # Tax should be calculated as subtotal * (1 + tax_rate)\n    return round(subtotal * (1 + tax_rate), 2)\n\n\ndef process_order(\n    items: list[tuple[str, float, int]], tax_rate: float\n) -> dict[str, float]:\n    \"\"\"Process a complete order.\n\n    Computes the discounted subtotal, tax amount, and grand total.\n    Returns a dict with keys: \"subtotal\", \"tax\", \"total\".\n    \"\"\"\n    subtotal = calculate_total(items)\n    total = apply_tax(subtotal, tax_rate)\n    # Tax should be calculated based on the discounted subtotal\n    tax = total - subtotal\n    return {\n        \"subtotal\": subtotal,\n        \"tax\": round(tax, 2),\n        \"total\": total,\n    }\n\n```",
+      "patch_applied": true,
+      "pre_patch_summary": {
+        "total": 14,
+        "passed": 4,
+        "failed": 10,
+        "errors": 0,
+        "skipped": 0
+      },
+      "post_patch_summary": {
+        "total": 14,
+        "passed": 14,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "duration_seconds": 10.356914416002837,
+      "model": "gemini-2.5-flash",
+      "llm_error_type": null,
+      "llm_error_message": null,
+      "llm_retry_count": 0,
+      "context_strategy": "original_with_failures"
+    }
+  ],
+  "initial_summary": {
+    "total": 14,
+    "passed": 4,
+    "failed": 10,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "total_duration_seconds": 10.49382604100174,
+  "context_strategy": "original_with_failures",
+  "fatal_error_type": null,
+  "fatal_error_message": null
+}

@@ -1,0 +1,53 @@
+{
+  "case_path": "datasets/mini_bugs/case_004",
+  "target_file": "buggy.py",
+  "model": "gemini-2.5-flash",
+  "success": true,
+  "total_iterations": 1,
+  "iterations": [
+    {
+      "iteration": 1,
+      "prompt": "You are an expert Python debugger. Your task is to fix a buggy Python file so that its test suite passes.\n\n## File: buggy.py\n\n```python\n\"\"\"\nRun-length encoding and string compression utilities.\n\nProvides functions to encode/decode strings using run-length encoding,\ncompute compression ratios, and find the most frequent run in a string.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef encode(s: str) -> list[tuple[str, int]]:\n    \"\"\"Run-length encode a string.\n\n    Groups consecutive identical characters and returns a list of\n    (character, count) tuples.\n\n    Example: \"aaabbc\" -> [(\"a\", 3), (\"b\", 2), (\"c\", 1)]\n    \"\"\"\n    if not s:\n        return []\n\n    result: list[tuple[str, int]] = []\n    current = s[0]\n    count = 1\n\n    for i in range(1, len(s)):\n        if s[i] == current:\n            count += 1\n        else:\n            result.append((current, count))\n            current = s[i]\n            count = 0\n\n    result.append((current, count))\n    return result\n\n\ndef decode(encoded: list[tuple[str, int]]) -> str:\n    \"\"\"Decode a run-length encoded list back to a string.\n\n    Example: [(\"a\", 3), (\"b\", 2), (\"c\", 1)] -> \"aaabbc\"\n    \"\"\"\n    parts: list[str] = []\n    for char, count in encoded:\n        parts.append(char * (count - 1))\n    return \"\".join(parts)\n\n\ndef compress_ratio(s: str) -> float:\n    \"\"\"Compute the compression ratio of run-length encoding.\n\n    Returns len(encoded_string) / len(s), where the encoded string\n    format is e.g. \"a3b2c1\".  A ratio < 1.0 means compression saved\n    space.  Returns 1.0 for empty strings.\n    \"\"\"\n    if not s:\n        return 1.0\n\n    encoded = encode(s)\n    encoded_length = len(encoded)\n    return encoded_length / len(s)\n\n\ndef most_frequent_run(s: str) -> tuple[str, int]:\n    \"\"\"Return the (char, count) tuple with the highest count.\n\n    On a tie, returns the run that appears first in the string.\n    Returns (\"\", 0) for an empty string.\n    \"\"\"\n    if not s:\n        return (\"\", 0)\n\n    encoded = encode(s)\n    best_char = encoded[0][0]\n    best_count = encoded[0][1]\n\n    for char, count in encoded[1:]:\n        if count >= best_count:\n            best_char = char\n            best_count = count\n\n    return (best_char, best_count)\n\n```\n\n## Failing test output\n\n```\nFAILED experiments.case_004.20260305T201051Z.workspace.test_buggy.test_encode_multiple_runs: def test_encode_multiple_runs():\n        \"\"\"Multiple distinct runs are captured with correct counts.\"\"\"\n>       assert encode(\"aaabbc\") == [(\"a\", 3), (\"b\", 2), (\"c\", 1)]\nE       AssertionError: assert [('a', 3), ('b', 1), ('c', 0)] == [('a', 3), ('b', 2), ('c', 1)]\nE         \nE         At index 1 di... (truncated)\nFAILED experiments.case_004.20260305T201051Z.workspace.test_buggy.test_encode_alternating: def test_encode_alternating():\n        \"\"\"Each character in an alternating string is its own run of length 1.\"\"\"\n>       assert encode(\"abab\") == [(\"a\", 1), (\"b\", 1), (\"a\", 1), (\"b\", 1)]\nE       AssertionError: assert [('a', 1), ('... 0), ('b', 0)] == [('a', 1), ('... 1), ('b', 1)]\nE         \nE     ... (truncated)\nFAILED experiments.case_004.20260305T201051Z.workspace.test_buggy.test_decode_simple: def test_decode_simple():\n        \"\"\"Decode reconstructs the original string from runs.\"\"\"\n>       assert decode([(\"a\", 3), (\"b\", 2), (\"c\", 1)]) == \"aaabbc\"\nE       AssertionError: assert 'aab' == 'aaabbc'\nE         \nE         - aaabbc\nE         + aab\n\n../../../../datasets/mini_bugs/case_004/test_bu... (truncated)\nFAILED experiments.case_004.20260305T201051Z.workspace.test_buggy.test_decode_single_char_runs: def test_decode_single_char_runs():\n        \"\"\"Runs of length 1 each produce a single character.\"\"\"\n>       assert decode([(\"x\", 1), (\"y\", 1), (\"z\", 1)]) == \"xyz\"\nE       AssertionError: assert '' == 'xyz'\nE         \nE         - xyz\n\n../../../../datasets/mini_bugs/case_004/test_buggy.py:46: Assertio... (truncated)\nFAILED experiments.case_004.20260305T201051Z.workspace.test_buggy.test_roundtrip_basic: def test_roundtrip_basic():\n        \"\"\"Encoding then decoding must reproduce the original string.\"\"\"\n        original = \"aaabbbcccc\"\n>       assert decode(encode(original)) == original\nE       AssertionError: assert 'aabcc' == 'aaabbbcccc'\nE         \nE         - aaabbbcccc\nE       ... (truncated)\n```\n\n## Instructions\n\n- Analyse the failing tests and identify the bug(s) in the source above.\n- Return ONLY the complete, corrected Python source code.\n- Wrap your answer in a single ```python ... ``` fenced code block.\n- Do NOT include any explanation, commentary, or additional text \u2014 only the fixed code inside the fence.\n",
+      "llm_response": "```python\n\"\"\"\nRun-length encoding and string compression utilities.\n\nProvides functions to encode/decode strings using run-length encoding,\ncompute compression ratios, and find the most frequent run in a string.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef encode(s: str) -> list[tuple[str, int]]:\n    \"\"\"Run-length encode a string.\n\n    Groups consecutive identical characters and returns a list of\n    (character, count) tuples.\n\n    Example: \"aaabbc\" -> [(\"a\", 3), (\"b\", 2), (\"c\", 1)]\n    \"\"\"\n    if not s:\n        return []\n\n    result: list[tuple[str, int]] = []\n    current = s[0]\n    count = 1\n\n    for i in range(1, len(s)):\n        if s[i] == current:\n            count += 1\n        else:\n            result.append((current, count))\n            current = s[i]\n            count = 1  # Fix: Reset count to 1 for the new character\n    \n    # Append the last run\n    result.append((current, count))\n    return result\n\n\ndef decode(encoded: list[tuple[str, int]]) -> str:\n    \"\"\"Decode a run-length encoded list back to a string.\n\n    Example: [(\"a\", 3), (\"b\", 2), (\"c\", 1)] -> \"aaabbc\"\n    \"\"\"\n    parts: list[str] = []\n    for char, count in encoded:\n        parts.append(char * count)  # Fix: Use count directly, not (count - 1)\n    return \"\".join(parts)\n\n\ndef compress_ratio(s: str) -> float:\n    \"\"\"Compute the compression ratio of run-length encoding.\n\n    Returns len(encoded_string) / len(s), where the encoded string\n    format is e.g. \"a3b2c1\".  A ratio < 1.0 means compression saved\n    space.  Returns 1.0 for empty strings.\n    \"\"\"\n    if not s:\n        return 1.0\n\n    encoded = encode(s)\n    encoded_length_str_format = 0\n    for _, count in encoded:\n        encoded_length_str_format += 1  # For the character itself\n        encoded_length_str_format += len(str(count))  # For the digit(s) of the count\n    \n    return encoded_length_str_format / len(s)\n\n\ndef most_frequent_run(s: str) -> tuple[str, int]:\n    \"\"\"Return the (char, count) tuple with the highest count.\n\n    On a tie, returns the run that appears first in the string.\n    Returns (\"\", 0) for an empty string.\n    \"\"\"\n    if not s:\n        return (\"\", 0)\n\n    encoded = encode(s)\n    best_char = encoded[0][0]\n    best_count = encoded[0][1]\n\n    for char, count in encoded[1:]:\n        # Fix: Only update if current count is strictly greater to prefer earlier runs on a tie.\n        if count > best_count: \n            best_char = char\n            best_count = count\n\n    return (best_char, best_count)\n\n```",
+      "patch_applied": true,
+      "pre_patch_summary": {
+        "total": 18,
+        "passed": 7,
+        "failed": 11,
+        "errors": 0,
+        "skipped": 0
+      },
+      "post_patch_summary": {
+        "total": 18,
+        "passed": 18,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "duration_seconds": 16.38700183399851,
+      "model": "gemini-2.5-flash",
+      "llm_error_type": null,
+      "llm_error_message": null,
+      "llm_retry_count": 0,
+      "context_strategy": "original_with_failures"
+    }
+  ],
+  "initial_summary": {
+    "total": 18,
+    "passed": 7,
+    "failed": 11,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_summary": {
+    "total": 18,
+    "passed": 18,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "total_duration_seconds": 16.541654542001197,
+  "context_strategy": "original_with_failures",
+  "fatal_error_type": null,
+  "fatal_error_message": null
+}
