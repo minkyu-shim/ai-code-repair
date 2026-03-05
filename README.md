@@ -131,6 +131,18 @@ Set a custom test timeout (default is 120 seconds):
 python scripts/repair.py --case datasets/mini_bugs/case_002 --timeout 60
 ```
 
+Control what context the LLM receives on retry iterations (when a patch fails and a new attempt is made):
+
+```bash
+# Default: LLM always sees the original buggy code + failures from the last failed patch
+python scripts/repair.py --case datasets/mini_bugs/case_001 --max-iterations 3 --context-strategy original_with_failures
+
+# Alternative: LLM sees its own last failed patch + that patch's failures
+python scripts/repair.py --case datasets/mini_bugs/case_001 --max-iterations 3 --context-strategy last_patch_with_failures
+```
+
+`--context-strategy` accepts `original_with_failures` (default) or `last_patch_with_failures`. The choice has no effect on the first iteration (there is no prior patch yet); it only changes what is shown on retries. This setting is recorded in `result.json` under `context_strategy`.
+
 **Console output**
 
 ```
@@ -248,7 +260,7 @@ Each element in `iterations` records: the iteration number, the full prompt sent
 The project follows a six-phase research plan. See `PROJECT_SPEC.md` for the full specification.
 
 - [x] **Phase 1 — Minimal Repair Loop**: single-model end-to-end repair, JUnit XML parsing, JSON logging, `mini_bugs` dataset.
-- [ ] **Phase 2 — Iterative Repair Framework**: structured iteration control, early stopping, temperature tuning, deterministic vs. stochastic runs.
+- [x] **Phase 2 — Iterative Repair Framework** *(in progress)*: context strategy for retry iterations (`--context-strategy`) implemented; early stopping, temperature tuning, and deterministic vs. stochastic runs planned.
 - [ ] **Phase 3 — Overfitting Detection**: hidden test cases, mutation testing, test amplification to catch patches that game the visible suite.
 - [ ] **Phase 4 — Multi-Model Benchmarking**: compare GPT-class models, Claude, and Gemini under identical conditions; standardised metrics table.
 - [ ] **Phase 5 — Stability Analysis**: run identical cases 10+ times per model, measure patch similarity, success consistency, and variance.

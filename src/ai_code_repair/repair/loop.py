@@ -10,7 +10,7 @@ from typing import Any
 
 from ai_code_repair.repair._project_root import find_project_root
 from ai_code_repair.repair.llm import GeminiClient
-from ai_code_repair.repair.log import IterationLog, RepairResult
+from ai_code_repair.repair.log import ContextStrategy, IterationLog, RepairResult
 from ai_code_repair.repair.patcher import apply_patch
 from ai_code_repair.repair.prompt import build_prompt, summarize_failures
 from ai_code_repair.runner.report import RunReport
@@ -35,6 +35,7 @@ class RepairConfig:
     timeout_seconds: int = 120
     llm_max_retries: int = 2
     llm_retry_backoff_seconds: float = 1.0
+    context_strategy: ContextStrategy = ContextStrategy.ORIGINAL_WITH_FAILURES
 
 
 class RepairLoop:
@@ -61,6 +62,7 @@ class RepairLoop:
 
         iteration_logs: list[dict[str, Any]] = []
         success = False
+        last_patch_source: str | None = None
         fatal_error_type: str | None = None
         fatal_error_message: str | None = None
         initial_summary_dict: dict[str, Any] = {
@@ -104,7 +106,14 @@ class RepairLoop:
                 iter_start = time.perf_counter()
                 pre_patch_summary = dict(current_summary_dict)
 
-                source_code = target_path.read_text(encoding="utf-8")
+                if (
+                    config.context_strategy is ContextStrategy.LAST_PATCH_WITH_FAILURES
+                    and last_patch_source is not None
+                ):
+                    source_code = last_patch_source
+                else:
+                    # ORIGINAL_WITH_FAILURES, or first iteration where no patch exists yet.
+                    source_code = original_snapshot.read_text(encoding="utf-8")
                 test_summary = summarize_failures(
                     latest_report.junit_xml_path, latest_report.stdout
                 )
@@ -145,6 +154,7 @@ class RepairLoop:
                         llm_error_type=llm_error_type,
                         llm_error_message=llm_error_message,
                         llm_retry_count=llm_retry_count,
+                        context_strategy=config.context_strategy.value,
                     )
                     iteration_logs.append(log.to_dict())
                     continue
@@ -155,6 +165,7 @@ class RepairLoop:
                 try:
                     apply_patch(target_path, new_source)
                     patch_applied = True
+                    last_patch_source = new_source
                 except SyntaxError:
                     # LLM produced syntactically invalid code — log and continue.
                     iter_duration = time.perf_counter() - iter_start
@@ -170,6 +181,7 @@ class RepairLoop:
                         llm_error_type=llm_error_type,
                         llm_error_message=llm_error_message,
                         llm_retry_count=llm_retry_count,
+                        context_strategy=config.context_strategy.value,
                     )
                     iteration_logs.append(log.to_dict())
                     continue
@@ -208,6 +220,7 @@ class RepairLoop:
                     llm_error_type=llm_error_type,
                     llm_error_message=llm_error_message,
                     llm_retry_count=llm_retry_count,
+                    context_strategy=config.context_strategy.value,
                 )
                 iteration_logs.append(log.to_dict())
         except Exception as exc:
@@ -226,6 +239,7 @@ class RepairLoop:
             initial_summary=initial_summary_dict,
             final_summary=current_summary_dict,
             total_duration_seconds=total_duration,
+            context_strategy=config.context_strategy.value,
             fatal_error_type=fatal_error_type,
             fatal_error_message=fatal_error_message,
         )

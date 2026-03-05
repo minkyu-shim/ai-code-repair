@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from ai_code_repair.repair import RepairConfig, RepairLoop
+from ai_code_repair.repair import ContextStrategy, RepairConfig, RepairLoop
 
 
 def main() -> None:
@@ -21,12 +21,19 @@ def main() -> None:
     parser.add_argument("--case", required=True, type=Path)
     parser.add_argument("--max-iterations", type=int, default=1)
     parser.add_argument("--timeout", type=int, default=120)
+    parser.add_argument(
+        "--context-strategy",
+        choices=[s.value for s in ContextStrategy],
+        default=ContextStrategy.ORIGINAL_WITH_FAILURES.value,
+        help="Context strategy for retry iterations (default: original_with_failures)",
+    )
     args = parser.parse_args()
 
     config = RepairConfig(
         case_dir=args.case,
         max_iterations=args.max_iterations,
         timeout_seconds=args.timeout,
+        context_strategy=ContextStrategy(args.context_strategy),
     )
     result = RepairLoop(config).run()
 

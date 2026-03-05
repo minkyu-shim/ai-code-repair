@@ -58,11 +58,19 @@ Connects to active LLM literature on self-refinement. Huang et al. (2023) showed
 
 ### Current Framework Status
 
-The current implementation uses **a variant of Option A with an inconsistency**: source code shown is the original (restored from snapshot), but test failures come from the previous failed patch. This is the baseline to compare against.
+`context_strategy` is now a configurable `RepairConfig` parameter (type: `ContextStrategy` enum from `log.py`, exported via `repair/__init__.py`). Two strategies are implemented:
+
+- **`original_with_failures`** (default) — Option A: original buggy code + test failures from the previous failed patch. This is the baseline.
+- **`last_patch_with_failures`** — Option B: the last syntactically valid patch + test failures from that patch. On the first iteration (or if no valid patch exists yet), falls back to original code.
+
+CLI flag: `--context-strategy` on `scripts/repair.py`.
+
+The Hybrid strategy (Option C: original + diff + failures) is not yet implemented and would require changes to `prompt.py`.
 
 ### Action Items
 
-- [ ] Lock in Option A as stable baseline before experimenting
-- [ ] Implement context strategy as a configurable parameter in `RepairConfig`
+- [x] Lock in Option A as stable baseline before experimenting
+- [x] Implement context strategy as a configurable parameter in `RepairConfig`
+- [ ] Implement Hybrid strategy (Option C) requiring prompt template changes
 - [ ] Design hidden test suite for overfitting detection (needed for this study)
 - [ ] Run A vs B vs Hybrid across at least 2 models, 3 iteration limits
