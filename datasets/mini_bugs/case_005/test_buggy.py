@@ -62,9 +62,9 @@ def test_build_order_dependency_first():
     graph = parse_rules(RULES)
     assert build_order(graph) == [
         "parse",
+        "lint",
         "scan",
         "compile",
-        "lint",
         "build",
         "deploy",
         "test",
