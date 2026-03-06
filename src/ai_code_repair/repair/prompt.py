@@ -8,7 +8,7 @@ _TRUNCATION_MARKER = "... (truncated)"
 _PER_ENTRY_MAX_CHARS = 300
 
 
-def summarize_failures(junit_xml_path: str, stdout: str, max_chars: int = 2000) -> str:
+def summarize_failures(junit_xml_path: str, stdout: str, max_chars: int = 2000, stderr: str = "") -> str:
     """
     Produce a compact failure summary from a JUnit XML file.
 
@@ -60,6 +60,9 @@ def summarize_failures(junit_xml_path: str, stdout: str, max_chars: int = 2000) 
             summary = stdout[:max_chars] + _TRUNCATION_MARKER
         else:
             summary = stdout
+        if stderr:
+            truncated_stderr = stderr[:2000]
+            summary = summary + "\n" + truncated_stderr
 
     # Final hard cap regardless of the path taken above.
     if len(summary) > max_chars:

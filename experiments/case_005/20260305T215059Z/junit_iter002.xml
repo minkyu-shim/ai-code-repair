@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="16" time="0.015" timestamp="2026-03-05T22:52:16.238011+01:00" hostname="Minkyus-MacBook-Pro.local"><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parse_rules_explicit_empty_target" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parse_rules_adds_leaf_only_dependencies" time="0.000"><failure message="AssertionError: assert {'build': {'p...parse': set()} == {'build': {'p...'scan': set()}&#10;  &#10;  Omitting 2 identical items, use -vv to show&#10;  Right contains 1 more item:&#10;  {'scan': set()}&#10;  Use -v to get more diff">def test_parse_rules_adds_leaf_only_dependencies():
+        """Dependencies that never appear on the left must still become graph nodes."""
+&gt;       assert parse_rules(["build: parse scan", "parse:"]) == {
+            "build": {"parse", "scan"},
+            "parse": set(),
+            "scan": set(),
+        }
+E       AssertionError: assert {'build': {'p...parse': set()} == {'build': {'p...'scan': set()}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Right contains 1 more item:
+E         {'scan': set()}
+E         Use -v to get more diff
+
+test_buggy.py:40: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parse_rules_ignores_blank_and_comment_lines" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_build_order_dependency_first" time="0.000"><failure message="AssertionError: assert ['parse', 'li...'deploy', ...] == ['parse', 'sc...'deploy', ...]&#10;  &#10;  At index 1 diff: 'lint' != 'scan'&#10;  Use -v to get more diff">def test_build_order_dependency_first():
+        """A valid build order must place every dependency before its dependents."""
+        graph = parse_rules(RULES)
+&gt;       assert build_order(graph) == [
+            "parse",
+            "scan",
+            "compile",
+            "lint",
+            "build",
+            "deploy",
+            "test",
+            "package",
+        ]
+E       AssertionError: assert ['parse', 'li...'deploy', ...] == ['parse', 'sc...'deploy', ...]
+E         
+E         At index 1 diff: 'lint' != 'scan'
+E         Use -v to get more diff
+
+test_buggy.py:63: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_build_order_lexicographic_tie_break" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parallel_stages_group_independent_work" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parallel_stages_chain_has_one_task_per_stage" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_affected_by_change_returns_transitive_dependents" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_affected_by_change_excludes_changed_targets" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_parse_rules_strips_whitespace" time="0.000"><failure message="KeyError: 'build'">def test_hidden_parse_rules_strips_whitespace():
+        """Whitespace around a target name should not leak into the graph key."""
+        graph = parse_rules(["  build  : parse scan  ", "parse:", "scan:"])
+&gt;       assert graph["build"] == {"parse", "scan"}
+               ^^^^^^^^^^^^^^
+E       KeyError: 'build'
+
+test_buggy.py:154: KeyError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_parse_rules_deduplicates_dependencies" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_build_order_cycle_raises" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_parallel_stages_never_repeat_nodes" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_parallel_stages_respect_dependency_levels" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_affected_by_change_with_multiple_sources" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_affected_by_change_leaf_with_no_dependents" time="0.000" /></testsuite></testsuites>

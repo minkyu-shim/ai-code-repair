@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="13" skipped="0" tests="16" time="0.027" timestamp="2026-03-05T22:50:59.826859+01:00" hostname="Minkyus-MacBook-Pro.local"><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parse_rules_explicit_empty_target" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parse_rules_adds_leaf_only_dependencies" time="0.000"><failure message="AssertionError: assert {'build': {'p...parse': set()} == {'build': {'p...'scan': set()}&#10;  &#10;  Omitting 2 identical items, use -vv to show&#10;  Right contains 1 more item:&#10;  {'scan': set()}&#10;  Use -v to get more diff">def test_parse_rules_adds_leaf_only_dependencies():
+        """Dependencies that never appear on the left must still become graph nodes."""
+&gt;       assert parse_rules(["build: parse scan", "parse:"]) == {
+            "build": {"parse", "scan"},
+            "parse": set(),
+            "scan": set(),
+        }
+E       AssertionError: assert {'build': {'p...parse': set()} == {'build': {'p...'scan': set()}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Right contains 1 more item:
+E         {'scan': set()}
+E         Use -v to get more diff
+
+test_buggy.py:40: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parse_rules_ignores_blank_and_comment_lines" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_build_order_dependency_first" time="0.000"><failure message="AssertionError: assert ['scan', 'par..., 'test', ...] == ['parse', 'sc...'deploy', ...]&#10;  &#10;  At index 0 diff: 'scan' != 'parse'&#10;  Use -v to get more diff">def test_build_order_dependency_first():
+        """A valid build order must place every dependency before its dependents."""
+        graph = parse_rules(RULES)
+&gt;       assert build_order(graph) == [
+            "parse",
+            "scan",
+            "compile",
+            "lint",
+            "build",
+            "deploy",
+            "test",
+            "package",
+        ]
+E       AssertionError: assert ['scan', 'par..., 'test', ...] == ['parse', 'sc...'deploy', ...]
+E         
+E         At index 0 diff: 'scan' != 'parse'
+E         Use -v to get more diff
+
+test_buggy.py:63: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_build_order_lexicographic_tie_break" time="0.000"><failure message="AssertionError: assert ['test', 'deploy', 'package'] == ['deploy', 'test', 'package']&#10;  &#10;  At index 0 diff: 'test' != 'deploy'&#10;  Use -v to get more diff">def test_build_order_lexicographic_tie_break():
+        """When several nodes are ready, the lexicographically smallest goes first."""
+        graph = {
+            "package": {"deploy", "test"},
+            "deploy": set(),
+            "test": set(),
+        }
+&gt;       assert build_order(graph) == ["deploy", "test", "package"]
+E       AssertionError: assert ['test', 'deploy', 'package'] == ['deploy', 'test', 'package']
+E         
+E         At index 0 diff: 'test' != 'deploy'
+E         Use -v to get more diff
+
+test_buggy.py:82: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parallel_stages_group_independent_work" time="0.000"><failure message="AssertionError: assert [['compile', ..., ['package']] == [['parse', 's..., ['package']]&#10;  &#10;  At index 0 diff: ['compile', 'lint', 'parse', 'scan'] != ['parse', 'scan']&#10;  Use -v to get more diff">def test_parallel_stages_group_independent_work():
+        """Independent nodes should share a stage until later dependencies unlock."""
+        graph = parse_rules(RULES)
+&gt;       assert parallel_stages(graph) == [
+            ["parse", "scan"],
+            ["compile", "lint"],
+            ["build"],
+            ["deploy", "test"],
+            ["package"],
+        ]
+E       AssertionError: assert [['compile', ..., ['package']] == [['parse', 's..., ['package']]
+E         
+E         At index 0 diff: ['compile', 'lint', 'parse', 'scan'] != ['parse', 'scan']
+E         Use -v to get more diff
+
+test_buggy.py:92: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_parallel_stages_chain_has_one_task_per_stage" time="0.000"><failure message="AssertionError: assert [['compile', ..., ['package']] == [['parse'], [..., ['package']]&#10;  &#10;  At index 0 diff: ['compile', 'parse'] != ['parse']&#10;  Use -v to get more diff">def test_parallel_stages_chain_has_one_task_per_stage():
+        """A linear dependency chain should yield one task in each stage."""
+        graph = {
+            "package": {"build"},
+            "build": {"compile"},
+            "compile": {"parse"},
+            "parse": set(),
+        }
+&gt;       assert parallel_stages(graph) == [
+            ["parse"],
+            ["compile"],
+            ["build"],
+            ["package"],
+        ]
+E       AssertionError: assert [['compile', ..., ['package']] == [['parse'], [..., ['package']]
+E         
+E         At index 0 diff: ['compile', 'parse'] != ['parse']
+E         Use -v to get more diff
+
+test_buggy.py:109: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_affected_by_change_returns_transitive_dependents" time="0.000"><failure message="AssertionError: assert set() == {'build', 'co...kage', 'test'}&#10;  &#10;  Extra items in the right set:&#10;  'compile'&#10;  'build'&#10;  'deploy'&#10;  'package'&#10;  'lint'&#10;  'test'&#10;  Use -v to get more diff">def test_affected_by_change_returns_transitive_dependents():
+        """A change should impact every downstream target, not its prerequisites."""
+        graph = parse_rules(RULES)
+&gt;       assert affected_by_change(graph, {"parse"}) == {
+            "compile",
+            "lint",
+            "build",
+            "deploy",
+            "test",
+            "package",
+        }
+E       AssertionError: assert set() == {'build', 'co...kage', 'test'}
+E         
+E         Extra items in the right set:
+E         'compile'
+E         'build'
+E         'deploy'
+E         'package'
+E         'lint'
+E         'test'
+E         Use -v to get more diff
+
+test_buggy.py:124: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_affected_by_change_excludes_changed_targets" time="0.000"><failure message="AssertionError: assert set() == {'build', 'co...kage', 'test'}&#10;  &#10;  Extra items in the right set:&#10;  'compile'&#10;  'build'&#10;  'deploy'&#10;  'package'&#10;  'lint'&#10;  'test'&#10;  Use -v to get more diff">def test_affected_by_change_excludes_changed_targets():
+        """Changed nodes themselves are not included in the downstream result set."""
+        graph = parse_rules(RULES)
+&gt;       assert affected_by_change(graph, {"parse", "scan"}) == {
+            "compile",
+            "lint",
+            "build",
+            "deploy",
+            "test",
+            "package",
+        }
+E       AssertionError: assert set() == {'build', 'co...kage', 'test'}
+E         
+E         Extra items in the right set:
+E         'compile'
+E         'build'
+E         'deploy'
+E         'package'
+E         'lint'
+E         'test'
+E         Use -v to get more diff
+
+test_buggy.py:137: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_parse_rules_strips_whitespace" time="0.000"><failure message="KeyError: 'build'">def test_hidden_parse_rules_strips_whitespace():
+        """Whitespace around a target name should not leak into the graph key."""
+        graph = parse_rules(["  build  : parse scan  ", "parse:", "scan:"])
+&gt;       assert graph["build"] == {"parse", "scan"}
+               ^^^^^^^^^^^^^^
+E       KeyError: 'build'
+
+test_buggy.py:154: KeyError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_parse_rules_deduplicates_dependencies" time="0.000" /><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_build_order_cycle_raises" time="0.000"><failure message="Failed: DID NOT RAISE &lt;class 'ValueError'&gt;">def test_hidden_build_order_cycle_raises():
+        """Cycles are invalid and should be rejected explicitly."""
+        graph = {
+            "compile": {"parse"},
+            "parse": {"compile"},
+        }
+&gt;       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'ValueError'&gt;
+
+test_buggy.py:169: Failed</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_parallel_stages_never_repeat_nodes" time="0.000"><failure message="AssertionError: assert 14 == 8&#10; +  where 14 = len(['compile', 'lint', 'parse', 'scan', 'build', 'compile', ...])&#10; +  and   8 = len({'build', 'compile', 'deploy', 'lint', 'package', 'parse', ...})&#10; +    where {'build', 'compile', 'deploy', 'lint', 'package', 'parse', ...} = set(['compile', 'lint', 'parse', 'scan', 'build', 'compile', ...])">def test_hidden_parallel_stages_never_repeat_nodes():
+        """Each node should appear in exactly one parallel stage."""
+        graph = parse_rules(RULES)
+        stages = parallel_stages(graph)
+        flattened = [node for stage in stages for node in stage]
+&gt;       assert len(flattened) == len(set(flattened))
+E       AssertionError: assert 14 == 8
+E        +  where 14 = len(['compile', 'lint', 'parse', 'scan', 'build', 'compile', ...])
+E        +  and   8 = len({'build', 'compile', 'deploy', 'lint', 'package', 'parse', ...})
+E        +    where {'build', 'compile', 'deploy', 'lint', 'package', 'parse', ...} = set(['compile', 'lint', 'parse', 'scan', 'build', 'compile', ...])
+
+test_buggy.py:178: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_parallel_stages_respect_dependency_levels" time="0.000"><failure message="AssertionError: assert 0 &lt; 0&#10; +  where 0 = _stage_index([['compile', 'lint', 'parse', 'scan'], ['build', 'compile', 'lint'], ['build', 'deploy', 'test'], ['deploy', 'package', 'test'], ['package']], 'parse')&#10; +  and   0 = _stage_index([['compile', 'lint', 'parse', 'scan'], ['build', 'compile', 'lint'], ['build', 'deploy', 'test'], ['deploy', 'package', 'test'], ['package']], 'lint')">def test_hidden_parallel_stages_respect_dependency_levels():
+        """Dependencies must always appear in an earlier stage than their target."""
+        graph = parse_rules(RULES)
+        stages = parallel_stages(graph)
+    
+        for node, deps in graph.items():
+            for dep in deps:
+&gt;               assert _stage_index(stages, dep) &lt; _stage_index(stages, node)
+E               AssertionError: assert 0 &lt; 0
+E                +  where 0 = _stage_index([['compile', 'lint', 'parse', 'scan'], ['build', 'compile', 'lint'], ['build', 'deploy', 'test'], ['deploy', 'package', 'test'], ['package']], 'parse')
+E                +  and   0 = _stage_index([['compile', 'lint', 'parse', 'scan'], ['build', 'compile', 'lint'], ['build', 'deploy', 'test'], ['deploy', 'package', 'test'], ['package']], 'lint')
+
+test_buggy.py:189: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_affected_by_change_with_multiple_sources" time="0.000"><failure message="AssertionError: assert {'parse'} == {'build', 'co...kage', 'test'}&#10;  &#10;  Extra items in the left set:&#10;  'parse'&#10;  Extra items in the right set:&#10;  'build'&#10;  'test'&#10;  'compile'...&#10;  &#10;  ...Full output truncated (3 lines hidden), use '-vv' to show">def test_hidden_affected_by_change_with_multiple_sources():
+        """Multiple changed inputs should union their downstream impact."""
+        graph = parse_rules(RULES)
+&gt;       assert affected_by_change(graph, {"lint", "scan"}) == {
+            "compile",
+            "build",
+            "deploy",
+            "test",
+            "package",
+        }
+E       AssertionError: assert {'parse'} == {'build', 'co...kage', 'test'}
+E         
+E         Extra items in the left set:
+E         'parse'
+E         Extra items in the right set:
+E         'build'
+E         'test'
+E         'compile'...
+E         
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+test_buggy.py:195: AssertionError</failure></testcase><testcase classname="experiments.case_005.20260305T215059Z.workspace.test_buggy" name="test_hidden_affected_by_change_leaf_with_no_dependents" time="0.000"><failure message="AssertionError: assert {'build', 'co..., 'scan', ...} == set()&#10;  &#10;  Extra items in the left set:&#10;  'compile'&#10;  'build'&#10;  'deploy'&#10;  'parse'&#10;  'lint'...&#10;  &#10;  ...Full output truncated (3 lines hidden), use '-vv' to show">def test_hidden_affected_by_change_leaf_with_no_dependents():
+        """A terminal target with no downstream dependents should affect nothing."""
+        graph = parse_rules(RULES)
+&gt;       assert affected_by_change(graph, {"package"}) == set()
+E       AssertionError: assert {'build', 'co..., 'scan', ...} == set()
+E         
+E         Extra items in the left set:
+E         'compile'
+E         'build'
+E         'deploy'
+E         'parse'
+E         'lint'...
+E         
+E         ...Full output truncated (3 lines hidden), use '-vv' to show
+
+test_buggy.py:207: AssertionError</failure></testcase></testsuite></testsuites>

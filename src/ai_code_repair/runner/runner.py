@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import subprocess  # it allows you to run external commands and get the output
+import sys
 import time
 import xml.etree.ElementTree as ET  # python built in XML parser
 from pathlib import Path
 from typing import Tuple, Iterable
 
 from ai_code_repair.runner.report import PytestSummary, RunReport
+
+
+def _safe_int(value: str, default: int = 0) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        return default
 
 
 def _parse_junit_xml(xml_path: Path) -> PytestSummary:
@@ -26,15 +34,15 @@ def _parse_junit_xml(xml_path: Path) -> PytestSummary:
     if root.tag == "testsuites":
         tests = failures = errors = skipped = 0
         for suite in root.findall("testsuite"):
-            tests += int(suite.attrib.get("tests", "0"))
-            failures += int(suite.attrib.get("failures", "0"))
-            errors += int(suite.attrib.get("errors", "0"))
-            skipped += int(suite.attrib.get("skipped", "0"))
+            tests += _safe_int(suite.attrib.get("tests", "0"))
+            failures += _safe_int(suite.attrib.get("failures", "0"))
+            errors += _safe_int(suite.attrib.get("errors", "0"))
+            skipped += _safe_int(suite.attrib.get("skipped", "0"))
     else:
-        tests = int(root.attrib.get("tests", "0"))
-        failures = int(root.attrib.get("failures", "0"))
-        errors = int(root.attrib.get("errors", "0"))
-        skipped = int(root.attrib.get("skipped", "0"))
+        tests = _safe_int(root.attrib.get("tests", "0"))
+        failures = _safe_int(root.attrib.get("failures", "0"))
+        errors = _safe_int(root.attrib.get("errors", "0"))
+        skipped = _safe_int(root.attrib.get("skipped", "0"))
 
     passed = max(tests - failures - errors - skipped, 0)
 
@@ -52,7 +60,7 @@ def _build_pytest_cmd(junit_xml_path: Path, pytest_args: Iterable[str]) -> list[
     Build the pytest command as a list suitable for subprocess.run(..., shell=False).
     """
     return [
-        "python",
+        sys.executable,
         "-m",
         "pytest",
         "-q",

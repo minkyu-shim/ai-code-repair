@@ -115,7 +115,8 @@ class RepairLoop:
                     # ORIGINAL_WITH_FAILURES, or first iteration where no patch exists yet.
                     source_code = original_snapshot.read_text(encoding="utf-8")
                 test_summary = summarize_failures(
-                    latest_report.junit_xml_path, latest_report.stdout
+                    latest_report.junit_xml_path, latest_report.stdout,
+                    stderr=latest_report.stderr,
                 )
                 prompt = build_prompt(source_code, test_summary, target_file)
                 raw_response = ""
@@ -169,8 +170,8 @@ class RepairLoop:
                     apply_patch(target_path, new_source)
                     patch_applied = True
                     last_patch_source = new_source
-                except SyntaxError:
-                    # LLM produced syntactically invalid code — log and continue.
+                except (SyntaxError, OSError):
+                    shutil.copy2(original_snapshot, target_path)
                     iter_duration = time.perf_counter() - iter_start
                     log = IterationLog(
                         iteration=iteration,
@@ -206,6 +207,7 @@ class RepairLoop:
                         latest_report = post_report
                         success = True
                     else:
+                        current_summary_dict = post_summary_dict
                         # Patch did not fix all failures — restore the original.
                         shutil.copy2(original_snapshot, target_path)
                         latest_report = post_report

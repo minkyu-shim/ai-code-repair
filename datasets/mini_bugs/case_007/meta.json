@@ -1,0 +1,46 @@
+{
+  "target_file": "buggy.py",
+  "case_id": "case_007",
+  "description": "Layered configuration parser and renderer with interacting bugs across key normalization, inheritance merging, dependency ordering, nested interpolation, identifier extraction, and downstream impact analysis. Early fixes expose deeper semantic faults in rendering and graph traversal.",
+  "num_bug_sites": 7,
+  "expected_min_iterations": 6,
+  "has_hidden_tests": true,
+  "loc": 134,
+  "bugs": [
+    {
+      "function": "parse_config",
+      "bug_type": "missing-whitespace-normalization",
+      "bug_location": "key parser"
+    },
+    {
+      "function": "referenced_keys",
+      "bug_type": "under-matching-identifier-pattern",
+      "bug_location": "regex"
+    },
+    {
+      "function": "merged_section",
+      "bug_type": "wrong-override-order",
+      "bug_location": "inheritance merge"
+    },
+    {
+      "function": "resolution_order",
+      "bug_type": "wrong-ready-selection",
+      "bug_location": "ready queue"
+    },
+    {
+      "function": "resolution_order",
+      "bug_type": "missing-cycle-detection",
+      "bug_location": "function exit"
+    },
+    {
+      "function": "render_section",
+      "bug_type": "uses-raw-values-instead-of-resolved-values",
+      "bug_location": "interpolation loop"
+    },
+    {
+      "function": "impacted_sections",
+      "bug_type": "wrong-traversal-direction",
+      "bug_location": "search loop"
+    }
+  ]
+}

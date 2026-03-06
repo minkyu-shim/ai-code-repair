@@ -1,0 +1,36 @@
+{
+  "target_file": "buggy.py",
+  "case_id": "case_005",
+  "description": "Dependency-planning module with cascading graph bugs across rule parsing, deterministic topological ordering, stage construction, and reverse impact analysis. Fixing the parser and order logic exposes deeper scheduling and traversal bugs.",
+  "num_bug_sites": 5,
+  "expected_min_iterations": 4,
+  "has_hidden_tests": true,
+  "loc": 96,
+  "bugs": [
+    {
+      "function": "parse_rules",
+      "bug_type": "missing-node-registration",
+      "bug_location": "rule-parser"
+    },
+    {
+      "function": "build_order",
+      "bug_type": "wrong-ready-selection",
+      "bug_location": "ready-queue"
+    },
+    {
+      "function": "build_order",
+      "bug_type": "missing-cycle-detection",
+      "bug_location": "function-exit"
+    },
+    {
+      "function": "parallel_stages",
+      "bug_type": "stage-frontier-leak",
+      "bug_location": "stage-construction"
+    },
+    {
+      "function": "affected_by_change",
+      "bug_type": "wrong-traversal-direction",
+      "bug_location": "search-loop"
+    }
+  ]
+}

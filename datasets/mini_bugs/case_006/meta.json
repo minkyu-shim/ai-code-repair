@@ -1,0 +1,46 @@
+{
+  "target_file": "buggy.py",
+  "case_id": "case_006",
+  "description": "Mini spreadsheet engine with interacting bugs across rule parsing, cell-reference extraction, deterministic topological evaluation, operator precedence, subtraction semantics, and downstream impact analysis. Fixing one layer exposes deeper faults in expression evaluation and dependency traversal.",
+  "num_bug_sites": 6,
+  "expected_min_iterations": 5,
+  "has_hidden_tests": true,
+  "loc": 130,
+  "bugs": [
+    {
+      "function": "parse_sheet",
+      "bug_type": "missing-whitespace-normalization",
+      "bug_location": "cell-parser"
+    },
+    {
+      "function": "referenced_cells",
+      "bug_type": "under-matching-cell-pattern",
+      "bug_location": "regex"
+    },
+    {
+      "function": "evaluation_order",
+      "bug_type": "wrong-ready-selection",
+      "bug_location": "ready-queue"
+    },
+    {
+      "function": "evaluation_order",
+      "bug_type": "missing-cycle-detection",
+      "bug_location": "function-exit"
+    },
+    {
+      "function": "_to_postfix",
+      "bug_type": "wrong-precedence-comparison",
+      "bug_location": "operator-stack"
+    },
+    {
+      "function": "_eval_postfix",
+      "bug_type": "reversed-subtraction-operands",
+      "bug_location": "operator-application"
+    },
+    {
+      "function": "impacted_cells",
+      "bug_type": "wrong-traversal-direction",
+      "bug_location": "search-loop"
+    }
+  ]
+}
