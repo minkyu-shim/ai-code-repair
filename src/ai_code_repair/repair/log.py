@@ -12,6 +12,7 @@ class ContextStrategy(str, Enum):
 
     ORIGINAL_WITH_FAILURES = "original_with_failures"
     LAST_PATCH_WITH_FAILURES = "last_patch_with_failures"
+    BEST_PATCH_WITH_FAILURES = "best_patch_with_failures"
 
 
 @dataclass

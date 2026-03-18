@@ -31,8 +31,8 @@ def main() -> None:
     parser.add_argument(
         "--context-strategy",
         choices=[s.value for s in ContextStrategy],
-        default=ContextStrategy.ORIGINAL_WITH_FAILURES.value,
-        help="Context strategy for retry iterations (default: original_with_failures)",
+        default=ContextStrategy.BEST_PATCH_WITH_FAILURES.value,
+        help="Context strategy for retry iterations (default: best_patch_with_failures)",
     )
     args = parser.parse_args()
 

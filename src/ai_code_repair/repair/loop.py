@@ -35,7 +35,7 @@ class RepairConfig:
     timeout_seconds: int = 120
     llm_max_retries: int = 2
     llm_retry_backoff_seconds: float = 1.0
-    context_strategy: ContextStrategy = ContextStrategy.ORIGINAL_WITH_FAILURES
+    context_strategy: ContextStrategy = ContextStrategy.BEST_PATCH_WITH_FAILURES
 
 
 class RepairLoop:
@@ -63,6 +63,9 @@ class RepairLoop:
         iteration_logs: list[dict[str, Any]] = []
         success = False
         last_patch_source: str | None = None
+        best_patch_source: str | None = None
+        best_passed: int = 0
+        best_patch_report: RunReport | None = None
         fatal_error_type: str | None = None
         fatal_error_message: str | None = None
         initial_summary_dict: dict[str, Any] = {
@@ -86,6 +89,10 @@ class RepairLoop:
             )
             shutil.copy2(target_path, original_snapshot)
 
+            best_snapshot_path = workspace_dir / (
+                Path(target_file).stem + "_best" + Path(target_file).suffix
+            )
+
             # 3. Run baseline pytest.
             latest_report: RunReport = run_pytest_case(
                 workspace_dir, report_dir, timeout_seconds=config.timeout_seconds
@@ -93,6 +100,7 @@ class RepairLoop:
             initial_summary = latest_report.summary
             initial_summary_dict = asdict(initial_summary)
             current_summary_dict = dict(initial_summary_dict)
+            best_passed = initial_summary.passed
 
             # 4. Already passing — nothing to do.
             if initial_summary.failed == 0 and initial_summary.errors == 0:
@@ -107,12 +115,17 @@ class RepairLoop:
                 pre_patch_summary = dict(current_summary_dict)
 
                 if (
+                    config.context_strategy is ContextStrategy.BEST_PATCH_WITH_FAILURES
+                    and best_patch_source is not None
+                ):
+                    source_code = best_patch_source
+                elif (
                     config.context_strategy is ContextStrategy.LAST_PATCH_WITH_FAILURES
                     and last_patch_source is not None
                 ):
                     source_code = last_patch_source
                 else:
-                    # ORIGINAL_WITH_FAILURES, or first iteration where no patch exists yet.
+                    # ORIGINAL_WITH_FAILURES, or first iteration of any strategy.
                     source_code = original_snapshot.read_text(encoding="utf-8")
                 test_summary = summarize_failures(
                     latest_report.junit_xml_path, latest_report.stdout,
@@ -171,7 +184,13 @@ class RepairLoop:
                     patch_applied = True
                     last_patch_source = new_source
                 except (SyntaxError, OSError):
-                    shutil.copy2(original_snapshot, target_path)
+                    if (
+                        config.context_strategy is ContextStrategy.BEST_PATCH_WITH_FAILURES
+                        and best_patch_source is not None
+                    ):
+                        shutil.copy2(best_snapshot_path, target_path)
+                    else:
+                        shutil.copy2(original_snapshot, target_path)
                     iter_duration = time.perf_counter() - iter_start
                     log = IterationLog(
                         iteration=iteration,
@@ -208,11 +227,38 @@ class RepairLoop:
                         success = True
                     else:
                         current_summary_dict = post_summary_dict
-                        # Patch did not fix all failures — restore the original.
-                        shutil.copy2(original_snapshot, target_path)
-                        latest_report = post_report
+                        new_passed = post_summary_obj.passed
+
+                        if (
+                            config.context_strategy is ContextStrategy.BEST_PATCH_WITH_FAILURES
+                            and new_passed > best_passed
+                        ):
+                            # Strict improvement — promote to best.
+                            best_patch_source = new_source
+                            best_passed = new_passed
+                            best_patch_report = post_report
+                            latest_report = post_report
+                            shutil.copy2(target_path, best_snapshot_path)
+                            # File is already on disk — no restore needed.
+                        else:
+                            # Regression, tie, or non-best strategy — restore.
+                            if (
+                                config.context_strategy is ContextStrategy.BEST_PATCH_WITH_FAILURES
+                                and best_patch_source is not None
+                            ):
+                                shutil.copy2(best_snapshot_path, target_path)
+                                latest_report = best_patch_report  # type: ignore[assignment]
+                            else:
+                                shutil.copy2(original_snapshot, target_path)
+                                latest_report = post_report
                 except Exception:
-                    shutil.copy2(original_snapshot, target_path)
+                    if (
+                        config.context_strategy is ContextStrategy.BEST_PATCH_WITH_FAILURES
+                        and best_patch_source is not None
+                    ):
+                        shutil.copy2(best_snapshot_path, target_path)
+                    else:
+                        shutil.copy2(original_snapshot, target_path)
                     raise
 
                 iter_duration = time.perf_counter() - iter_start
