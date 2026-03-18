@@ -32,7 +32,7 @@ class RepairConfig:
     case_dir: Path
     max_iterations: int = 1
     model: str = GeminiClient.MODEL
-    timeout_seconds: int = 120
+    timeout_seconds: int = 30
     llm_max_retries: int = 2
     llm_retry_backoff_seconds: float = 1.0
     context_strategy: ContextStrategy = ContextStrategy.BEST_PATCH_WITH_FAILURES
@@ -102,13 +102,20 @@ class RepairLoop:
             current_summary_dict = dict(initial_summary_dict)
             best_passed = initial_summary.passed
 
+            # 3b. Baseline timed out — fatal, do not attempt repair.
+            if latest_report.timed_out:
+                fatal_error_type = "TimeoutError"
+                fatal_error_message = (
+                    f"Baseline pytest timed out after {config.timeout_seconds}s"
+                )
+                # Skip the repair loop entirely; fall through to result creation.
             # 4. Already passing — nothing to do.
-            if initial_summary.failed == 0 and initial_summary.errors == 0:
+            elif initial_summary.failed == 0 and initial_summary.errors == 0:
                 success = True
 
             # 5. Repair loop.
             for iteration in range(1, config.max_iterations + 1):
-                if success:
+                if success or fatal_error_type is not None:
                     break
 
                 iter_start = time.perf_counter()
@@ -217,6 +224,37 @@ class RepairLoop:
                         workspace_dir, report_dir, timeout_seconds=config.timeout_seconds,
                         junit_stem=f"junit_iter{iteration:03d}",
                     )
+
+                    # Post-patch timeout — roll back and skip this iteration.
+                    if post_report.timed_out:
+                        if (
+                            config.context_strategy is ContextStrategy.BEST_PATCH_WITH_FAILURES
+                            and best_patch_source is not None
+                        ):
+                            shutil.copy2(best_snapshot_path, target_path)
+                        else:
+                            shutil.copy2(original_snapshot, target_path)
+                        iter_duration = time.perf_counter() - iter_start
+                        log = IterationLog(
+                            iteration=iteration,
+                            prompt=prompt,
+                            llm_response=raw_response,
+                            patch_applied=patch_applied,
+                            pre_patch_summary=pre_patch_summary,
+                            post_patch_summary=None,
+                            duration_seconds=iter_duration,
+                            model=config.model,
+                            llm_error_type=llm_error_type,
+                            llm_error_message=llm_error_message,
+                            llm_retry_count=llm_retry_count,
+                            extraction_failed=extraction_failed,
+                            junit_xml_path=str(post_report.junit_xml_path),
+                            context_strategy=config.context_strategy.value,
+                            runner_timed_out=True,
+                        )
+                        iteration_logs.append(log.to_dict())
+                        continue
+
                     post_summary_obj = post_report.summary
                     post_summary_dict = asdict(post_summary_obj)
                     tests_pass = post_summary_obj.failed == 0 and post_summary_obj.errors == 0

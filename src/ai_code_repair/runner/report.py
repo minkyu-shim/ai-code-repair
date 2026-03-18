@@ -23,6 +23,7 @@ class RunReport:
     stdout: str
     stderr: str
     summary: PytestSummary
+    timed_out: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         # asdict converts dataclass' instances into a dictionary

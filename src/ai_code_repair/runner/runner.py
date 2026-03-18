@@ -75,7 +75,7 @@ def run_pytest_case(
         report_dir: Path,
         *,
         pytest_args: Tuple[str, ...] = (),
-        timeout_seconds: int = 120,
+        timeout_seconds: int = 30,
         junit_stem: str = "junit",
 ) -> RunReport:
     """
@@ -133,4 +133,5 @@ def run_pytest_case(
             stdout=stdout,
             stderr=stderr,
             summary=PytestSummary(total=0, passed=0, failed=0, errors=1, skipped=0),
+            timed_out=True,
         )

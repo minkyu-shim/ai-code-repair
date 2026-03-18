@@ -31,6 +31,7 @@ class IterationLog:
     extraction_failed: bool = False
     junit_xml_path: str | None = None
     context_strategy: str = "original_with_failures"
+    runner_timed_out: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

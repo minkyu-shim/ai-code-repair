@@ -1,0 +1,55 @@
+{
+  "case_path": "datasets/mini_bugs/case_001",
+  "target_file": "buggy.py",
+  "model": "gemini-2.5-flash",
+  "success": false,
+  "total_iterations": 1,
+  "iterations": [
+    {
+      "iteration": 1,
+      "prompt": "You are an expert Python debugger. Your task is to fix a buggy Python file so that its test suite passes.\n\n## File: buggy.py\n\n```python\n\"\"\"\nI will write 10-20 small cases that contains python bugs in this file\nRun test cases at ./test_buggy.py then\nThe meta datas will be saved in ./meta.json\n\"\"\"\n\ndef add(x: int, y: int) -> int:\n    return x - y\n\ndef subtract(x: int, y: int) -> int:\n    return x + y\n\ndef count(nums: list[int])-> int:\n    res: int = 0\n    for num in range(len(nums) + 1):\n        res += 1\n    return res\n\ndef count_2(nums):\n    res = 0\n    i = 0\n    while i < len(nums):\n        res+=1\n    return res\n```\n\n## Failing test output\n\n```\n\nERROR: usage: python -m pytest [options] [file_or_dir] [file_or_dir] [...]\npython -m pytest: error: unrecognized arguments: --timeout=1\n  inifile: /Users/minkyu/base/03-personal-project/01-ai-code-repair/pyproject.toml\n  rootdir: /Users/minkyu/base/03-personal-project/01-ai-code-repair\n\n\n```\n\n## Instructions\n\n- Analyse the failing tests and identify the bug(s) in the source above.\n- Return ONLY the complete, corrected Python source code.\n- Wrap your answer in a single ```python ... ``` fenced code block.\n- Do NOT include any explanation, commentary, or additional text \u2014 only the fixed code inside the fence.\n",
+      "llm_response": "```python\n\"\"\"\nI will write 10-20 small cases that contains python bugs in this file\nRun test cases at ./test_buggy.py then\nThe meta datas will be saved in ./meta.json\n\"\"\"\n\ndef add(x: int, y: int) -> int:\n    return x + y\n\ndef subtract(x: int, y: int) -> int:\n    return x - y\n\ndef count(nums: list[int])-> int:\n    res: int = 0\n    for num in range(len(nums)): # Changed range(len(nums) + 1) to range(len(nums))\n        res += 1\n    return res\n\ndef count_2(nums):\n    res = 0\n    i = 0\n    while i < len(nums):\n        res+=1\n        i+=1 # Added increment for i to prevent infinite loop\n    return res\n```",
+      "patch_applied": true,
+      "pre_patch_summary": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "post_patch_summary": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "duration_seconds": 7.300051249971148,
+      "model": "gemini-2.5-flash",
+      "llm_error_type": null,
+      "llm_error_message": null,
+      "llm_retry_count": 0,
+      "extraction_failed": false,
+      "junit_xml_path": "/Users/minkyu/base/03-personal-project/01-ai-code-repair/experiments/case_001/20260318T132649Z/junit_iter001.xml",
+      "context_strategy": "best_patch_with_failures"
+    }
+  ],
+  "initial_summary": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "errors": 1,
+    "skipped": 0
+  },
+  "final_summary": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "errors": 1,
+    "skipped": 0
+  },
+  "total_duration_seconds": 7.424949417007156,
+  "context_strategy": "best_patch_with_failures",
+  "fatal_error_type": null,
+  "fatal_error_message": null
+}
