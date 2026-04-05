@@ -74,3 +74,63 @@ The Hybrid strategy (Option C: original + diff + failures) is not yet implemente
 - [ ] Implement Hybrid strategy (Option C) requiring prompt template changes
 - [ ] Design hidden test suite for overfitting detection (needed for this study)
 - [ ] Run A vs B vs Hybrid across at least 2 models, 3 iteration limits
+
+---
+
+## [RQ-002] Test Feedback vs. Code-Only: Does Error Output Help LLMs Debug?
+
+**Status:** Open — not yet implemented or tested
+**Priority:** Medium (natural complement to RQ-001)
+**Relevant phase:** Phase 2 / Phase 4 (Multi-Model Benchmarking)
+
+### The Question
+
+For simple, structurally obvious bugs (e.g. missing `i += 1` in a while loop), an LLM can likely identify and fix the bug from code alone. Does providing test failure output actually improve repair accuracy — and how much does this vary with bug complexity?
+
+### The Two Conditions
+
+| Condition | Prompt contains | Key question |
+|---|---|---|
+| **Code only** | Buggy source, no test output | Can the LLM identify the bug statically? |
+| **Code + test failures** | Buggy source + pytest failure output | Does error signal improve accuracy or speed? |
+
+### Why This Is Research-Worthy
+
+Most APR literature assumes test feedback is necessary. This question challenges that assumption for the simpler end of the bug-complexity spectrum. The gap between conditions is expected to be:
+- **Small** for simple structural bugs (missing increment, off-by-one)
+- **Large** for semantic/logic bugs (wrong formula, wrong variable, incorrect boundary)
+
+This produces a *bug complexity × feedback type* interaction — a publishable finding if the interaction effect is significant.
+
+### Connection to RQ-001
+
+RQ-001 asks: *which context to show when iterating?*
+RQ-002 asks: *is iteration even needed — how much repair signal comes from tests vs. code structure?*
+
+Together they characterize the full information value of the test in the repair loop.
+
+### Experimental Design
+
+| Variable | Levels |
+|---|---|
+| Prompt type | Code only vs. Code + test failures |
+| Bug complexity | Simple structural / Medium logic / Hard cascading |
+| Model | Gemini 2.5 Flash, Gemini 2.5 Flash Lite (weaker model needed to see gap) |
+| Runs per condition | 5–10 (stability) |
+
+**Metrics to compare:**
+- One-shot fix rate per condition
+- Fix rate by bug complexity tier
+- Gap magnitude: (code+tests fix rate) − (code-only fix rate)
+
+### Hypothesis
+
+LLM models (Gemini 2.5 Flash) will show a small gap on simple bugs and a larger gap on complex bugs. Weaker models (Flash Lite) will show a larger gap across all complexity tiers, making the value of test feedback more pronounced.
+
+### Action Items
+
+- [ ] Tag existing cases with complexity tier (simple / medium / hard) in `meta.json`
+- [ ] Implement "code only" prompt variant in `prompt.py` (strip test failure section)
+- [ ] Add `prompt_variant` field to `RepairConfig` and `IterationLog`
+- [ ] Run code-only vs. code+tests across cases 001–005 on both models
+- [ ] Analyze gap by complexity tier
