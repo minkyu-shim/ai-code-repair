@@ -43,7 +43,7 @@ Connects to active LLM literature on self-refinement. Huang et al. (2023) showed
 
 | Variable | Levels |
 |---|---|
-| Context strategy | A (original only), B (failed patch), Hybrid (original + diff) |
+| Context strategy | A (original only), B (last patch), best patch, Hybrid (original + diff) |
 | Model | All tested models |
 | Max iterations | 3, 5, 10 |
 | Bug difficulty | Easy, medium, hard |
@@ -58,10 +58,11 @@ Connects to active LLM literature on self-refinement. Huang et al. (2023) showed
 
 ### Current Framework Status
 
-`context_strategy` is now a configurable `RepairConfig` parameter (type: `ContextStrategy` enum from `log.py`, exported via `repair/__init__.py`). Two strategies are implemented:
+`context_strategy` is now a configurable `RepairConfig` parameter (type: `ContextStrategy` enum from `log.py`, exported via `repair/__init__.py`). Three strategies are implemented:
 
-- **`original_with_failures`** (default) — Option A: original buggy code + test failures from the previous failed patch. This is the baseline.
-- **`last_patch_with_failures`** — Option B: the last syntactically valid patch + test failures from that patch. On the first iteration (or if no valid patch exists yet), falls back to original code.
+- **`best_patch_with_failures`** (default) — the best patch seen so far (fewest failing tests) + test failures from that patch. Falls back to original code on the first iteration.
+- **`original_with_failures`** — Option A: original buggy code + test failures from the previous failed patch. Baseline for research comparison.
+- **`last_patch_with_failures`** — Option B: the last syntactically valid patch + test failures from that patch. Falls back to original code on the first iteration or if no valid patch exists yet.
 
 CLI flag: `--context-strategy` on `scripts/repair.py`.
 

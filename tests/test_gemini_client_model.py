@@ -29,9 +29,8 @@ def test_repair_config_model_custom():
     assert config.model == "gemini-2.5-flash-lite"
 
 
-@patch("ai_code_repair.repair.llm.genai.Client")
-@patch.object(GeminiClient, "__init__", return_value=None)
-def test_repair_loop_wires_model_to_client(mock_init, mock_genai_client):
+@patch("ai_code_repair.repair.loop.create_client")
+def test_repair_loop_wires_model_to_client(mock_create_client):
     config = RepairConfig(case_dir=Path("."), model="test-model")
     RepairLoop(config)
-    mock_init.assert_called_with(model="test-model")
+    mock_create_client.assert_called_with("test-model")

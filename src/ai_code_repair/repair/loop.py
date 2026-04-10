@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ai_code_repair.repair._project_root import find_project_root
-from ai_code_repair.repair.llm import GeminiClient
+from ai_code_repair.repair.llm import GeminiClient, create_client, extract_code
 from ai_code_repair.repair.log import ContextStrategy, IterationLog, RepairResult
 from ai_code_repair.repair.patcher import apply_patch
 from ai_code_repair.repair.prompt import build_prompt, summarize_failures
@@ -43,7 +43,7 @@ class RepairConfig:
 class RepairLoop:
     def __init__(self, config: RepairConfig) -> None:
         self._config = config
-        self._client = GeminiClient(model=config.model)
+        self._client = create_client(config.model)
 
     def run(self) -> RepairResult:
         config = self._config
@@ -152,7 +152,7 @@ class RepairLoop:
                 for attempt in range(config.llm_max_retries + 1):
                     try:
                         raw_response = self._client.generate(prompt, temperature=config.temperature)
-                        new_source, extraction_failed = GeminiClient.extract_code(raw_response)
+                        new_source, extraction_failed = extract_code(raw_response)
                         llm_retry_count = attempt
                         break
                     except Exception as exc:

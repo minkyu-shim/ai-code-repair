@@ -50,10 +50,11 @@ def _setup_case(tmp_path: Path) -> Path:
 
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_syntax_error_is_recoverable(
-    mock_apply_patch, mock_client_cls, mock_run_pytest, tmp_path
+    mock_extract_code, mock_apply_patch, mock_create_client, mock_run_pytest, tmp_path
 ):
     case_dir = _setup_case(tmp_path)
 
@@ -74,9 +75,8 @@ def test_syntax_error_is_recoverable(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.return_value = ("x = 2\n", False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.return_value = ("x = 2\n", False)
 
     config = RepairConfig(case_dir=case_dir, max_iterations=2, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)
@@ -87,10 +87,11 @@ def test_syntax_error_is_recoverable(
 
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_oserror_is_recoverable(
-    mock_apply_patch, mock_client_cls, mock_run_pytest, tmp_path
+    mock_extract_code, mock_apply_patch, mock_create_client, mock_run_pytest, tmp_path
 ):
     case_dir = _setup_case(tmp_path)
 
@@ -111,9 +112,8 @@ def test_oserror_is_recoverable(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.return_value = ("x = 2\n", False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.return_value = ("x = 2\n", False)
 
     config = RepairConfig(case_dir=case_dir, max_iterations=2, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)
@@ -124,10 +124,11 @@ def test_oserror_is_recoverable(
 
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_oserror_triggers_rollback(
-    mock_apply_patch, mock_client_cls, mock_run_pytest, tmp_path
+    mock_extract_code, mock_apply_patch, mock_create_client, mock_run_pytest, tmp_path
 ):
     case_dir = _setup_case(tmp_path)
     original_content = "x = 1\n"
@@ -152,9 +153,8 @@ def test_oserror_triggers_rollback(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.return_value = ("x = 2\n", False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.return_value = ("x = 2\n", False)
 
     config = RepairConfig(case_dir=case_dir, max_iterations=2, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)

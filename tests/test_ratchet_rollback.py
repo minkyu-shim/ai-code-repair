@@ -55,10 +55,11 @@ def _setup_case(tmp_path: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_ratchet_promotes_on_strict_improvement(
-    mock_apply_patch, mock_client_cls, mock_run_pytest, tmp_path
+    mock_extract_code, mock_apply_patch, mock_create_client, mock_run_pytest, tmp_path
 ):
     """Baseline: 0/3; Iter 1: 2/3 promoted; Iter 2: 3/3 success."""
     case_dir = _setup_case(tmp_path)
@@ -86,9 +87,8 @@ def test_ratchet_promotes_on_strict_improvement(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.return_value = ("x = 2\n", False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.return_value = ("x = 2\n", False)
 
     config = RepairConfig(
         case_dir=case_dir,
@@ -106,10 +106,11 @@ def test_ratchet_promotes_on_strict_improvement(
 # ---------------------------------------------------------------------------
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_ratchet_restores_best_on_regression(
-    mock_apply_patch, mock_client_cls, mock_run_pytest, tmp_path
+    mock_extract_code, mock_apply_patch, mock_create_client, mock_run_pytest, tmp_path
 ):
     """Baseline: 0/4; Iter 1: 3/4 promoted; Iter 2: 1/4 regression, best restored."""
     case_dir = _setup_case(tmp_path)
@@ -146,9 +147,8 @@ def test_ratchet_restores_best_on_regression(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.side_effect = lambda resp: (next(iter_sources), False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.side_effect = lambda resp: (next(iter_sources), False)
 
     config = RepairConfig(
         case_dir=case_dir,
@@ -168,10 +168,11 @@ def test_ratchet_restores_best_on_regression(
 # ---------------------------------------------------------------------------
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_ratchet_restores_best_on_tie(
-    mock_apply_patch, mock_client_cls, mock_run_pytest, tmp_path
+    mock_extract_code, mock_apply_patch, mock_create_client, mock_run_pytest, tmp_path
 ):
     """Baseline: 0/4; Iter 1: 2/4 promoted; Iter 2: 2/4 tie, best NOT updated."""
     case_dir = _setup_case(tmp_path)
@@ -208,9 +209,8 @@ def test_ratchet_restores_best_on_tie(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.side_effect = lambda resp: (next(iter_sources), False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.side_effect = lambda resp: (next(iter_sources), False)
 
     config = RepairConfig(
         case_dir=case_dir,
@@ -230,10 +230,11 @@ def test_ratchet_restores_best_on_tie(
 # ---------------------------------------------------------------------------
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_ratchet_falls_back_to_original_when_no_best(
-    mock_apply_patch, mock_client_cls, mock_run_pytest, tmp_path
+    mock_extract_code, mock_apply_patch, mock_create_client, mock_run_pytest, tmp_path
 ):
     """Baseline: 0/3; Iter 1: SyntaxError, no best, rollback to original."""
     case_dir = _setup_case(tmp_path)
@@ -267,9 +268,8 @@ def test_ratchet_falls_back_to_original_when_no_best(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.return_value = ("x = 2\n", False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.return_value = ("x = 2\n", False)
 
     config = RepairConfig(
         case_dir=case_dir,
@@ -295,10 +295,11 @@ def test_ratchet_falls_back_to_original_when_no_best(
 # ---------------------------------------------------------------------------
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_non_best_strategy_rollback_unchanged(
-    mock_apply_patch, mock_client_cls, mock_run_pytest, tmp_path
+    mock_extract_code, mock_apply_patch, mock_create_client, mock_run_pytest, tmp_path
 ):
     """ORIGINAL_WITH_FAILURES: improvement without full pass restores original."""
     case_dir = _setup_case(tmp_path)
@@ -328,9 +329,8 @@ def test_non_best_strategy_rollback_unchanged(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.return_value = ("x = 2  # patched\n", False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.return_value = ("x = 2  # patched\n", False)
 
     config = RepairConfig(
         case_dir=case_dir,
@@ -350,13 +350,14 @@ def test_non_best_strategy_rollback_unchanged(
 # ---------------------------------------------------------------------------
 
 @patch("ai_code_repair.repair.loop.run_pytest_case")
-@patch("ai_code_repair.repair.loop.GeminiClient")
+@patch("ai_code_repair.repair.loop.create_client")
 @patch("ai_code_repair.repair.loop.build_prompt")
 @patch("ai_code_repair.repair.loop.summarize_failures")
 @patch("ai_code_repair.repair.loop.apply_patch")
+@patch("ai_code_repair.repair.loop.extract_code")
 def test_prompt_uses_best_patch_source_after_regression(
-    mock_apply_patch, mock_summarize, mock_build_prompt,
-    mock_client_cls, mock_run_pytest, tmp_path,
+    mock_extract_code, mock_apply_patch, mock_summarize, mock_build_prompt,
+    mock_create_client, mock_run_pytest, tmp_path,
 ):
     """After regression, iter 3 prompt should use iter-1 best source."""
     case_dir = _setup_case(tmp_path)
@@ -401,9 +402,8 @@ def test_prompt_uses_best_patch_source_after_regression(
 
     client_instance = MagicMock()
     client_instance.generate.return_value = "```python\nx = 2\n```"
-    mock_client_cls.return_value = client_instance
-    mock_client_cls.extract_code.side_effect = lambda resp: (next(iter_sources), False)
-    mock_client_cls.MODEL = "test-model"
+    mock_create_client.return_value = client_instance
+    mock_extract_code.side_effect = lambda resp: (next(iter_sources), False)
 
     config = RepairConfig(
         case_dir=case_dir,

@@ -26,7 +26,7 @@ def main() -> None:
         "--model",
         type=str,
         default=GeminiClient.MODEL,
-        help="Gemini model ID to use for code generation (default: %(default)s)",
+        help="Model to use. Supported prefixes: gemini- (default), gpt-, o1/o3/o4, claude- (default: %(default)s)",
     )
     parser.add_argument(
         "--temperature",

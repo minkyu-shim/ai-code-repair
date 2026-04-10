@@ -10,7 +10,7 @@ Given a directory containing a buggy Python file and a pytest test suite, the fr
 
 1. Runs the tests to capture the current failure state.
 2. Builds a structured prompt from the failing test output and the buggy source code.
-3. Calls an LLM (currently Gemini 2.5 Flash) and extracts the proposed patch.
+3. Calls an LLM (Gemini, OpenAI, or Anthropic — routed automatically by model name) and extracts the proposed patch.
 4. Validates the patch's syntax, applies it inside an isolated workspace directory, and re-runs the tests.
 5. If all tests pass, the repair is complete. If they still fail, the workspace copy is restored from the frozen original snapshot and the iteration repeats up to a configurable maximum. The `datasets/` directory is never modified.
 
@@ -56,7 +56,7 @@ datasets/case_XXX/
   [Prompt]  — builds the LLM repair prompt from source + failure output
         |
         v
-  [LLM]     — calls Gemini API, extracts fenced code block from response
+  [LLM]     — routes model name to the correct provider client, extracts fenced code block from response
         |
         v
   [Patcher] — validates syntax, writes patch to workspace/buggy.py;
@@ -75,7 +75,7 @@ datasets/case_XXX/
 | Runner | `src/ai_code_repair/runner/runner.py` | Execute pytest, parse JUnit XML, return `RunReport` |
 | Report types | `src/ai_code_repair/runner/report.py` | `PytestSummary` and `RunReport` dataclasses |
 | Prompt | `src/ai_code_repair/repair/prompt.py` | Summarise failures, build LLM prompt string |
-| LLM client | `src/ai_code_repair/repair/llm.py` | Wrap Gemini API, extract code from fenced response |
+| LLM client | `src/ai_code_repair/repair/llm.py` | `LLMClient` Protocol; `GeminiClient`, `OpenAIClient`, `AnthropicClient`; `create_client(model)` factory routes by model name prefix; `extract_code()` shared utility |
 | Patcher | `src/ai_code_repair/repair/patcher.py` | Syntax-validate and apply patches to the workspace copy; rollback restores from `buggy_original.py` |
 | Logger | `src/ai_code_repair/repair/log.py` | `IterationLog` and `RepairResult` dataclasses with JSON serialisation |
 | Loop | `src/ai_code_repair/repair/loop.py` | Orchestrate the full repair loop using the modules above |
@@ -87,7 +87,7 @@ datasets/case_XXX/
 **Prerequisites**
 
 - Python 3.11 or newer
-- A [Google AI Studio](https://aistudio.google.com/) API key for Gemini
+- An API key for whichever provider(s) you intend to use
 
 **Install**
 
@@ -98,18 +98,30 @@ cd ai-code-repair
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
+# Default install — includes Gemini support only
 pip install -e .
+
+# To use OpenAI models (gpt-*, o1/o3/o4 prefixes)
+pip install -e ".[openai]"
+
+# To use Anthropic models (claude-* prefix)
+pip install -e ".[anthropic]"
+
+# To install all provider SDKs at once
+pip install -e ".[all-models]"
 ```
 
 **Environment variables**
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root with the keys for the providers you plan to use:
 
 ```
 GEMINI_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
 ```
 
-`scripts/repair.py` calls `load_dotenv()` on startup, so the key is picked up automatically. Alternatively, export it directly in your shell.
+`scripts/repair.py` calls `load_dotenv()` on startup, so keys are picked up automatically. Alternatively, export them directly in your shell. Only the key for the provider you are actually using is required.
 
 ---
 
@@ -131,17 +143,40 @@ Set a custom test timeout (default is 120 seconds):
 python scripts/repair.py --case datasets/mini_bugs/case_002 --timeout 60
 ```
 
+Use a different model (provider is routed automatically by model name prefix):
+
+```bash
+# OpenAI — requires pip install -e ".[openai]" and OPENAI_API_KEY
+python scripts/repair.py --case datasets/mini_bugs/case_001 --model gpt-4o
+
+# Anthropic — requires pip install -e ".[anthropic]" and ANTHROPIC_API_KEY
+python scripts/repair.py --case datasets/mini_bugs/case_001 --model claude-opus-4-5
+```
+
+Supported model name prefixes: `gemini-` (default), `gpt-`, `o1`, `o3`, `o4`, `claude-`.
+
+Set a fixed sampling temperature (default: provider's API default):
+
+```bash
+python scripts/repair.py --case datasets/mini_bugs/case_001 --temperature 0.2
+```
+
+The temperature value is recorded in `result.json` under `temperature` (at both the top level and per iteration). Omitting `--temperature` leaves the field as `null` and lets the API use its own default.
+
 Control what context the LLM receives on retry iterations (when a patch fails and a new attempt is made):
 
 ```bash
-# Default: LLM always sees the original buggy code + failures from the last failed patch
+# Default: LLM sees the best patch produced so far + failures from that patch
+python scripts/repair.py --case datasets/mini_bugs/case_001 --max-iterations 3 --context-strategy best_patch_with_failures
+
+# Option A: LLM always sees the original buggy code + failures from the last failed patch
 python scripts/repair.py --case datasets/mini_bugs/case_001 --max-iterations 3 --context-strategy original_with_failures
 
-# Alternative: LLM sees its own last failed patch + that patch's failures
+# Option B: LLM sees its own last failed patch + that patch's failures
 python scripts/repair.py --case datasets/mini_bugs/case_001 --max-iterations 3 --context-strategy last_patch_with_failures
 ```
 
-`--context-strategy` accepts `original_with_failures` (default) or `last_patch_with_failures`. The choice has no effect on the first iteration (there is no prior patch yet); it only changes what is shown on retries. This setting is recorded in `result.json` under `context_strategy`.
+`--context-strategy` accepts `best_patch_with_failures` (default), `original_with_failures`, or `last_patch_with_failures`. The choice has no effect on the first iteration (there is no prior patch yet); it only changes what is shown on retries. This setting is recorded in `result.json` under `context_strategy`.
 
 **Console output**
 
@@ -217,10 +252,12 @@ experiments/
 | `final_summary` | object | Test counts after the last run |
 | `total_duration_seconds` | float | Wall time for the entire run |
 | `iterations` | array | Per-iteration detail (see below) |
+| `context_strategy` | string | Context strategy used for retry iterations |
+| `temperature` | float\|null | Sampling temperature passed to the LLM; `null` if not set |
 | `fatal_error_type` | string\|null | Exception class name if the loop crashed |
 | `fatal_error_message` | string\|null | Exception message if the loop crashed |
 
-Each element in `iterations` records: the iteration number, the full prompt sent, the raw LLM response, whether the patch was applied, pre- and post-patch test summaries, duration, model name, and any LLM errors with retry counts.
+Each element in `iterations` records: the iteration number, the full prompt sent, the raw LLM response, whether the patch was applied, pre- and post-patch test summaries, duration, model name, context strategy, temperature, and any LLM errors with retry counts.
 
 ---
 
@@ -239,7 +276,7 @@ Each element in `iterations` records: the iteration number, the full prompt sent
 │   └── ai_code_repair/
 │       ├── repair/
 │       │   ├── __init__.py
-│       │   ├── llm.py          # GeminiClient
+│       │   ├── llm.py          # LLMClient Protocol, GeminiClient, OpenAIClient, AnthropicClient, create_client()
 │       │   ├── log.py          # IterationLog, RepairResult
 │       │   ├── loop.py         # RepairLoop, RepairConfig
 │       │   ├── patcher.py      # apply_patch (workspace-scoped; no .bak files)
@@ -260,7 +297,7 @@ Each element in `iterations` records: the iteration number, the full prompt sent
 The project follows a six-phase research plan. See `PROJECT_SPEC.md` for the full specification.
 
 - [x] **Phase 1 — Minimal Repair Loop**: single-model end-to-end repair, JUnit XML parsing, JSON logging, `mini_bugs` dataset.
-- [x] **Phase 2 — Iterative Repair Framework** *(in progress)*: context strategy for retry iterations (`--context-strategy`) implemented; early stopping, temperature tuning, and deterministic vs. stochastic runs planned.
+- [x] **Phase 2 — Iterative Repair Framework** *(in progress)*: context strategy (`--context-strategy`), temperature control (`--temperature`), and multi-model support (`--model` with Gemini/OpenAI/Anthropic) implemented; early stopping and deterministic vs. stochastic run analysis planned.
 - [ ] **Phase 3 — Overfitting Detection**: hidden test cases, mutation testing, test amplification to catch patches that game the visible suite.
 - [ ] **Phase 4 — Multi-Model Benchmarking**: compare GPT-class models, Claude, and Gemini under identical conditions; standardised metrics table.
 - [ ] **Phase 5 — Stability Analysis**: run identical cases 10+ times per model, measure patch similarity, success consistency, and variance.

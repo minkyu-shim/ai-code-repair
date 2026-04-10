@@ -1,37 +1,37 @@
 from __future__ import annotations
 
-from ai_code_repair.repair.llm import GeminiClient
+from ai_code_repair.repair.llm import extract_code
 from ai_code_repair.repair.log import IterationLog
 
 
 def test_extract_code_python_label():
     response = "```python\ncode\n```"
-    assert GeminiClient.extract_code(response) == ("code\n", False)
+    assert extract_code(response) == ("code\n", False)
 
 
 def test_extract_code_python_label_uppercase():
     response = "```Python\ncode\n```"
-    assert GeminiClient.extract_code(response) == ("code\n", False)
+    assert extract_code(response) == ("code\n", False)
 
 
 def test_extract_code_py_label():
     response = "```py\ncode\n```"
-    assert GeminiClient.extract_code(response) == ("code\n", False)
+    assert extract_code(response) == ("code\n", False)
 
 
 def test_extract_code_unlabeled_fence():
     response = "```\ncode\n```"
-    assert GeminiClient.extract_code(response) == ("code\n", False)
+    assert extract_code(response) == ("code\n", False)
 
 
 def test_extract_code_no_fence():
     response = "just some prose"
-    assert GeminiClient.extract_code(response) == ("just some prose", True)
+    assert extract_code(response) == ("just some prose", True)
 
 
 def test_extract_code_trailing_whitespace_after_label():
     response = "```python   \ncode\n```"
-    assert GeminiClient.extract_code(response) == ("code\n", False)
+    assert extract_code(response) == ("code\n", False)
 
 
 def _make_iteration_log(**overrides):
