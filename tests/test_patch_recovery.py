@@ -78,7 +78,7 @@ def test_syntax_error_is_recoverable(
     mock_client_cls.extract_code.return_value = ("x = 2\n", False)
     mock_client_cls.MODEL = "test-model"
 
-    config = RepairConfig(case_dir=case_dir, max_iterations=2)
+    config = RepairConfig(case_dir=case_dir, max_iterations=2, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)
     result = loop.run()
 
@@ -115,7 +115,7 @@ def test_oserror_is_recoverable(
     mock_client_cls.extract_code.return_value = ("x = 2\n", False)
     mock_client_cls.MODEL = "test-model"
 
-    config = RepairConfig(case_dir=case_dir, max_iterations=2)
+    config = RepairConfig(case_dir=case_dir, max_iterations=2, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)
     result = loop.run()
 
@@ -156,7 +156,7 @@ def test_oserror_triggers_rollback(
     mock_client_cls.extract_code.return_value = ("x = 2\n", False)
     mock_client_cls.MODEL = "test-model"
 
-    config = RepairConfig(case_dir=case_dir, max_iterations=2)
+    config = RepairConfig(case_dir=case_dir, max_iterations=2, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)
     result = loop.run()
 

@@ -32,6 +32,7 @@ class IterationLog:
     junit_xml_path: str | None = None
     context_strategy: str = "original_with_failures"
     runner_timed_out: bool = False
+    temperature: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -49,6 +50,7 @@ class RepairResult:
     final_summary: dict[str, Any]
     total_duration_seconds: float
     context_strategy: str = "original_with_failures"
+    temperature: float | None = None
     fatal_error_type: str | None = None
     fatal_error_message: str | None = None
 

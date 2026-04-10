@@ -84,7 +84,7 @@ def test_failed_patch_updates_current_summary(
     mock_client_cls.extract_code.return_value = ("x = 2\n", False)
     mock_client_cls.MODEL = "test-model"
 
-    config = RepairConfig(case_dir=case_dir, max_iterations=3)
+    config = RepairConfig(case_dir=case_dir, max_iterations=3, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)
     result = loop.run()
 
@@ -121,7 +121,7 @@ def test_failed_run_final_summary_reflects_last_test(
     mock_client_cls.extract_code.return_value = ("x = 2\n", False)
     mock_client_cls.MODEL = "test-model"
 
-    config = RepairConfig(case_dir=case_dir, max_iterations=2)
+    config = RepairConfig(case_dir=case_dir, max_iterations=2, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)
     result = loop.run()
 
@@ -160,7 +160,7 @@ def test_syntax_error_does_not_update_summary(
     mock_client_cls.extract_code.return_value = ("x = 2\n", False)
     mock_client_cls.MODEL = "test-model"
 
-    config = RepairConfig(case_dir=case_dir, max_iterations=2)
+    config = RepairConfig(case_dir=case_dir, max_iterations=2, experiments_base_dir=tmp_path / "experiments")
     loop = RepairLoop(config)
     result = loop.run()
 

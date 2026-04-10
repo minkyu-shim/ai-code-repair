@@ -50,20 +50,6 @@ def _setup_case(tmp_path: Path) -> Path:
     return case_dir
 
 
-def _find_workspace(case_dir: Path) -> Path:
-    """Locate the workspace directory created by RepairLoop.run().
-
-    The loop writes to ``experiments/<case_name>/<run_id>/workspace/``,
-    resolved from the current working directory.  We search the experiments
-    tree matching the case name to find the single workspace dir.
-    """
-    experiments_root = Path("experiments").resolve() / case_dir.name
-    workspaces = sorted(experiments_root.rglob("workspace"))
-    # Return the most recently created one (last in sorted order).
-    assert workspaces, f"No workspace found under {experiments_root}"
-    return workspaces[-1]
-
-
 # ---------------------------------------------------------------------------
 # Scenario 1: Ratchet promotes on strict improvement, then succeeds
 # ---------------------------------------------------------------------------
@@ -108,6 +94,7 @@ def test_ratchet_promotes_on_strict_improvement(
         case_dir=case_dir,
         max_iterations=2,
         context_strategy=ContextStrategy.BEST_PATCH_WITH_FAILURES,
+        experiments_base_dir=tmp_path / "experiments",
     )
     result = RepairLoop(config).run()
 
@@ -167,6 +154,7 @@ def test_ratchet_restores_best_on_regression(
         case_dir=case_dir,
         max_iterations=2,
         context_strategy=ContextStrategy.BEST_PATCH_WITH_FAILURES,
+        experiments_base_dir=tmp_path / "experiments",
     )
     result = RepairLoop(config).run()
 
@@ -228,6 +216,7 @@ def test_ratchet_restores_best_on_tie(
         case_dir=case_dir,
         max_iterations=2,
         context_strategy=ContextStrategy.BEST_PATCH_WITH_FAILURES,
+        experiments_base_dir=tmp_path / "experiments",
     )
     result = RepairLoop(config).run()
 
@@ -286,6 +275,7 @@ def test_ratchet_falls_back_to_original_when_no_best(
         case_dir=case_dir,
         max_iterations=2,
         context_strategy=ContextStrategy.BEST_PATCH_WITH_FAILURES,
+        experiments_base_dir=tmp_path / "experiments",
     )
     result = RepairLoop(config).run()
 
@@ -346,6 +336,7 @@ def test_non_best_strategy_rollback_unchanged(
         case_dir=case_dir,
         max_iterations=1,
         context_strategy=ContextStrategy.ORIGINAL_WITH_FAILURES,
+        experiments_base_dir=tmp_path / "experiments",
     )
     result = RepairLoop(config).run()
 
@@ -418,6 +409,7 @@ def test_prompt_uses_best_patch_source_after_regression(
         case_dir=case_dir,
         max_iterations=3,
         context_strategy=ContextStrategy.BEST_PATCH_WITH_FAILURES,
+        experiments_base_dir=tmp_path / "experiments",
     )
     result = RepairLoop(config).run()
 

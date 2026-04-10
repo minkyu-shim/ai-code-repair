@@ -1,24 +1,31 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from google import genai
 
 
 class GeminiClient:
     MODEL = "gemini-2.5-flash"
+    DEFAULT_TEMPERATURE: float = 1.0
 
     def __init__(self, model: str = MODEL) -> None:
         # Reads GEMINI_API_KEY from the environment automatically.
         self._client = genai.Client()
         self._model = model
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, *, temperature: float | None = None) -> str:
         """Send a prompt to the Gemini API and return the raw text response."""
-        response = self._client.models.generate_content(
-            model=self._model,
-            contents=prompt,
-        )
+        kwargs: dict[str, Any] = {
+            "model": self._model,
+            "contents": prompt,
+        }
+        if temperature is not None:
+            kwargs["config"] = genai.types.GenerateContentConfig(
+                temperature=temperature,
+            )
+        response = self._client.models.generate_content(**kwargs)
         return response.text
 
     @staticmethod

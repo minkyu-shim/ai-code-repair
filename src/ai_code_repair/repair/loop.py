@@ -36,6 +36,8 @@ class RepairConfig:
     llm_max_retries: int = 2
     llm_retry_backoff_seconds: float = 1.0
     context_strategy: ContextStrategy = ContextStrategy.BEST_PATCH_WITH_FAILURES
+    temperature: float | None = None
+    experiments_base_dir: Path | None = None
 
 
 class RepairLoop:
@@ -49,7 +51,8 @@ class RepairLoop:
 
         # 2. Create a timestamped report directory under experiments/.
         run_id = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        report_dir = (Path("experiments") / case_dir.name / run_id).resolve()
+        experiments_base = config.experiments_base_dir if config.experiments_base_dir is not None else Path("experiments")
+        report_dir = (experiments_base / case_dir.name / run_id).resolve()
 
         # Copy the case directory into an isolated workspace so the
         # original dataset is never modified.
@@ -148,7 +151,7 @@ class RepairLoop:
 
                 for attempt in range(config.llm_max_retries + 1):
                     try:
-                        raw_response = self._client.generate(prompt)
+                        raw_response = self._client.generate(prompt, temperature=config.temperature)
                         new_source, extraction_failed = GeminiClient.extract_code(raw_response)
                         llm_retry_count = attempt
                         break
@@ -179,6 +182,7 @@ class RepairLoop:
                         extraction_failed=False,
                         junit_xml_path=None,
                         context_strategy=config.context_strategy.value,
+                        temperature=config.temperature,
                     )
                     iteration_logs.append(log.to_dict())
                     continue
@@ -214,6 +218,7 @@ class RepairLoop:
                         extraction_failed=extraction_failed,
                         junit_xml_path=None,
                         context_strategy=config.context_strategy.value,
+                        temperature=config.temperature,
                     )
                     iteration_logs.append(log.to_dict())
                     continue
@@ -251,6 +256,7 @@ class RepairLoop:
                             junit_xml_path=str(post_report.junit_xml_path),
                             context_strategy=config.context_strategy.value,
                             runner_timed_out=True,
+                            temperature=config.temperature,
                         )
                         iteration_logs.append(log.to_dict())
                         continue
@@ -315,6 +321,7 @@ class RepairLoop:
                     extraction_failed=extraction_failed,
                     junit_xml_path=str(post_report.junit_xml_path),
                     context_strategy=config.context_strategy.value,
+                    temperature=config.temperature,
                 )
                 iteration_logs.append(log.to_dict())
         except Exception as exc:
@@ -334,6 +341,7 @@ class RepairLoop:
             final_summary=current_summary_dict,
             total_duration_seconds=total_duration,
             context_strategy=config.context_strategy.value,
+            temperature=config.temperature,
             fatal_error_type=fatal_error_type,
             fatal_error_message=fatal_error_message,
         )

@@ -29,6 +29,12 @@ def main() -> None:
         help="Gemini model ID to use for code generation (default: %(default)s)",
     )
     parser.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help="LLM sampling temperature (default: API default)",
+    )
+    parser.add_argument(
         "--context-strategy",
         choices=[s.value for s in ContextStrategy],
         default=ContextStrategy.BEST_PATCH_WITH_FAILURES.value,
@@ -42,6 +48,7 @@ def main() -> None:
         model=args.model,
         timeout_seconds=args.timeout,
         context_strategy=ContextStrategy(args.context_strategy),
+        temperature=args.temperature,
     )
     result = RepairLoop(config).run()
 
